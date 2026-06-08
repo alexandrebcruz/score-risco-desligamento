@@ -1,0 +1,5 @@
+modelo,AUC_holdout_2023,Brier,obs
+"CatBoost full-data (298M, GPU, cardinalidade completa)",0.708,0.107,"treino-only, sem vazamento"
+CatBoost amostra (~4M),0.701,0.108,treino-only
+Score de células treino-only,0.686,0.110,treino-only (justo)
+Score de células c/ 2023 embutido,0.738,0.104,VAZADO (referência)

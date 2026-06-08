@@ -1,0 +1,15 @@
+experimento,regime,AUC,Brier,LogLoss,observacao
+Células c/ 2023 (VAZADO),ref. (leakage),0.738,0.104,0.346,não honesto: usa 2023 nas taxas
+Score de células (treino-only),honesto/bug,0.685,0.111,0.372,abordagem agregada do projeto
+CatBoost full-data (4 anos),honesto/bug,0.708,0.107,0.358,sem as 8 features novas
+CatBoost amostra,honesto/bug,0.701,0.108,0.361,amostra 2%
+Ensemble base — Modelo A,honesto/bug,0.675,0.111,0.368,
+Ensemble base — Modelo B,honesto/bug,0.611,0.169,0.546,valida no passado
+Ensemble base (A+B),honesto/bug,0.642,0.123,0.403,features faixa/causa quebradas em 2023
+Ensemble +lags (A+B),honesto/bug,0.654,,,lags 'ajudavam' no regime bugado
+Ensemble base — Modelo A,CORRIGIDO,0.7256,0.1067,0.3545,
+Ensemble base — Modelo B,CORRIGIDO,0.7436,0.1052,0.3523,
+Ensemble base (A+B)  ★MELHOR,CORRIGIDO,0.7407,0.1044,0.3477,sem lags
+Ensemble +lags — Modelo A,CORRIGIDO,0.7095,0.1064,0.3566,early-stop iter 70
+Ensemble +lags — Modelo B,CORRIGIDO,0.7124,0.1069,0.3566,early-stop iter 95
+Ensemble +lags (A+B),CORRIGIDO,0.7155,0.1061,0.3549,lags pioram (overfit)

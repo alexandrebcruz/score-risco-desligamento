@@ -1,0 +1,25 @@
+{
+  "modelo_A": {
+    "AUC": 0.709463394826312,
+    "Brier": 0.10643051214843458,
+    "LogLoss": 0.3566106251636326
+  },
+  "modelo_B": {
+    "AUC": 0.712420221052127,
+    "Brier": 0.10692657754101163,
+    "LogLoss": 0.35662622733480825
+  },
+  "ensemble": {
+    "AUC": 0.7155173319375512,
+    "Brier": 0.10613849292446713,
+    "LogLoss": 0.35491345441166106
+  },
+  "best_iter_A": 70,
+  "best_iter_B": 95,
+  "holdout": 2023,
+  "n_holdout": 82964122,
+  "n_features": 136,
+  "n_lag_cols": 114,
+  "metrica": "Logloss (treino + early stopping)",
+  "segundos": 648.2
+}

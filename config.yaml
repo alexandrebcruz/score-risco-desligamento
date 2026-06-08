@@ -1,0 +1,135 @@
+# =============================================================================
+# Configuração central do projeto — Score Agregado de Risco de Desligamento
+# =============================================================================
+# Todos os notebooks e módulos em src/ leem deste arquivo (via src/config.py).
+# Ajuste aqui anos, caminhos, thresholds e faixas de binning.
+
+# Período histórico nacional: 2016-2023 (8 anos). 2016/2017 vêm por UF no FTP;
+# 2018+ por região. O parser lida com ambos. Anos atípicos: 2020-2021 (pandemia).
+anos: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023]
+
+# Anos considerados atípicos (choque pandêmico). Se `excluir_anos_atipicos: true`,
+# eles são removidos do cálculo das taxas estruturais (mantidos só para comparação).
+anos_atipicos: [2020, 2021]
+excluir_anos_atipicos: false
+
+# Horizontes de previsão do score (em meses)
+horizontes_meses: [3, 6, 12]
+
+# -----------------------------------------------------------------------------
+# Modo de execução
+# -----------------------------------------------------------------------------
+# synthetic_mode: true  -> gera dados sintéticos com o MESMO schema dos microdados.
+#                          Permite rodar o pipeline 00->06 ponta a ponta SEM download.
+# synthetic_mode: false -> tenta baixar/ler os microdados reais (RAIS/CAGED).
+synthetic_mode: false
+synthetic:
+  n_vinculos_por_ano: 60000   # tamanho da amostra RAIS sintética por ano
+  n_movs_caged_por_ano: 40000 # movimentações CAGED sintéticas por ano
+  seed: 42
+
+# Subset opcional para protótipo com dados reais (lista de UFs ou null = todas)
+ufs_subset: null
+
+# Regiões da RAIS a baixar/processar (arquivos RAIS_VINC_PUB_<REGIAO>.7z).
+# Cobertura NACIONAL (todas as grandes regiões). Para um recorte leve, reduza
+# a lista (ex.: [NORTE]).
+rais:
+  regioes: [NORTE, NORDESTE, CENTRO_OESTE, MG_ES_RJ, SP, SUL]
+
+# Novo CAGED — componente conjuntural (recente). Usado no nb07 para calcular um
+# fator de ajuste por célula L=(cbo2,cnae2,uf). Use meses MAIS RECENTES que a
+# RAIS (ex.: 2024, enquanto a RAIS estrutural vai até 2023).
+caged:
+  ano: 2024
+  meses: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+  # Força do shrinkage do fator para 1.0 em células L pouco populosas.
+  shrinkage_fator: 200
+
+# -----------------------------------------------------------------------------
+# PGFN — Dados Abertos da Dívida Ativa da União e do FGTS
+# -----------------------------------------------------------------------------
+# Base trimestral pública. URL: {base}/{ano}_trimestre_TT/Dados_abertos_{TIPO}.zip
+# Usada por src/pgfn.py (CLI: `python -m src.pgfn`).
+pgfn:
+  base_url: "https://dadosabertos.pgfn.gov.br"
+  ano_inicio: 2020
+  trimestre_inicio: 1
+  # ano_fim/trimestre_fim null -> detecta automaticamente o último publicado.
+  ano_fim: null
+  trimestre_fim: null
+  # Grupos a baixar. Previdenciario (~80 MB) + FGTS (~15 MB) por trimestre.
+  # Inclua Nao_Previdenciario (~1,2 GB/trimestre, ~30 GB no total) só se precisar.
+  tipos: [Previdenciario, FGTS]
+  extrair: true               # descompactar os .zip (CSVs por UF)
+  dir: data/raw/pgfn          # destino (relativo à raiz)
+
+# -----------------------------------------------------------------------------
+# Caminhos (relativos à raiz do projeto)
+# -----------------------------------------------------------------------------
+paths:
+  raw: data/raw
+  interim: data/interim
+  processed: data/processed
+  rates: data/processed/rates
+  dicts: data/dicts
+  figures: outputs/figures
+  tables: outputs/tables
+
+# -----------------------------------------------------------------------------
+# URLs dos microdados (TODO: confirmar endpoints/padrões de nome reais)
+# -----------------------------------------------------------------------------
+urls:
+  # RAIS Vínculos — FTP PDET/MTE. Padrão histórico aproximado abaixo.
+  rais_base: "ftp://ftp.mtps.gov.br/pdet/microdados/RAIS"   # TODO confirmar
+  # Novo CAGED — FTP PDET/MTE (arquivos mensais CAGEDMOV).
+  caged_base: "ftp://ftp.mtps.gov.br/pdet/microdados/NOVO%20CAGED"  # TODO confirmar
+  # Alternativa recomendada: basedosdados (BigQuery) — ver notebook 01.
+
+# -----------------------------------------------------------------------------
+# Binning das dimensões (bordas das faixas)
+# -----------------------------------------------------------------------------
+binning:
+  # Tempo de vínculo em meses -> faixas (bordas superiores; última = +inf)
+  tempo_vinculo_meses: [3, 6, 12, 24, 60]
+  # Idade em anos -> faixas
+  idade_anos: [24, 29, 39, 49, 64]
+  # Tamanho do estabelecimento (nº de empregados) -> faixas (códigos RAIS aproximados)
+  tamanho_estab: [4, 9, 49, 99, 499]
+  # Escolaridade: mapeamento de código RAIS/CAGED -> faixa canônica em src/binning.py
+
+# -----------------------------------------------------------------------------
+# Suavização / backoff (decisão metodológica central)
+# -----------------------------------------------------------------------------
+suavizacao:
+  # Força do shrinkage Empirical Bayes (pseudo-contagens vindas do nível-pai).
+  # Quanto maior, mais a célula é "puxada" para a taxa do nível mais agregado.
+  shrinkage_m: 50
+  # Exposição mínima para registrar uma célula como "nível efetivo confiável"
+  # (não bloqueia o cálculo — o EB sempre suaviza — apenas marca a confiança).
+  exposicao_minima: 50
+  # Níveis de backoff a NÃO materializar (ver src/cells.py BACKOFF_LEVELS).
+  # Na escala nacional, os 2 mais granulares geram dezenas de milhões de células
+  # ultra-esparsas (1-2 vínculos) sem valor após o shrinkage -> excluídos.
+  niveis_excluidos: [completo, cbo4_cnae4_tempo_tam_uf]
+
+# Modelo supervisionado (CatBoost) — benchmark vs score agregado (nb08)
+ml:
+  frac_treino: 0.02      # fração amostrada das partições de treino (2020-2022) ~4,3M
+  frac_teste: 0.02       # fração amostrada do holdout (2023) ~1,6M
+  seed: 42
+  catboost:
+    depth: 6
+    learning_rate: 0.1
+    max_iterations: 1500       # teto; early stopping decide o nº real de árvores
+    early_stopping_rounds: 50  # para quando a AUC da validação (2022) estagna
+
+# Categorias unificadas de motivo de desligamento
+motivos:
+  - involuntario_sjc      # dispensa sem justa causa (default do score)
+  - involuntario_cjc      # dispensa com justa causa
+  - pedido_demissao       # iniciativa do empregado
+  - fim_contrato          # término de contrato a prazo/temporário
+  - aposent_morte         # aposentadoria / morte
+  - outros                # demais motivos
+motivo_default: [involuntario_sjc]

@@ -1,0 +1,8 @@
+modelo,AUC,Brier,LogLoss,conjunto
+Células c/ 2023 (VAZADO - referência),0.738,0.104,0.346,amostra
+"CatBoost full-data (4 anos, AUC-stop)",0.708,0.107,0.358,completo
+CatBoost amostra (AUC-stop),0.701,0.108,0.361,amostra
+Ensemble — Modelo A (fit 2019-20),0.675,0.111,0.368,completo
+Score de células treino-only,0.685,0.111,0.372,amostra
+Ensemble (A+B)/2,0.642,0.123,0.403,completo
+Ensemble — Modelo B (val no passado),0.611,0.169,0.546,completo

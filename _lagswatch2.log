@@ -1,0 +1,22 @@
+15:36:34 RUN P=18 IT=0 RAM=242 
+15:38:35 RUN P=19 IT=0 RAM=258 
+15:40:37 RUN P=20 IT=0 RAM=266 
+15:42:38 RUN P=22 IT=0 RAM=278 
+15:44:40 RUN P=22 IT=0 RAM=296 
+15:46:41 RUN P=23 IT=0 RAM=293 
+15:48:43 RUN P=24 IT=0 RAM=297 
+15:50:45 RUN P=25 IT=0 RAM=297 
+15:52:46 RUN P=26 IT=0 RAM=307 
+15:54:48 RUN P=0 IT=0 RAM=133 
+15:56:49 
+15:58:49 
+16:00:49 
+16:02:50 
+16:04:50 
+16:06:51 
+16:08:51 
+16:10:51 
+16:12:54 DEAD P= IT= RAM=111 [stderr] grep: /workspace/train.log: No such file or directory grep: /workspace/train.log: No such file or directory 
+16:14:56 DEAD P= IT= RAM=111 [stderr] grep: /workspace/train.log: No such file or directory grep: /workspace/train.log: No such file or directory 
+16:16:59 DEAD P= IT= RAM=111 [stderr] grep: /workspace/train.log: No such file or directory grep: /workspace/train.log: No such file or directory 
+==MORREU (3x)==

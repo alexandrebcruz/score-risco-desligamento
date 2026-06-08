@@ -1,0 +1,23 @@
+{
+  "n_fit": 136443175,
+  "n_val": 78486132,
+  "n_holdout": 82964122,
+  "taxa_y_fit": 0.13816324634779278,
+  "taxa_y_val": 0.15492798141715022,
+  "taxa_y_holdout": 0.13290073750192885,
+  "best_iteration": 1051,
+  "max_iterations": 3000,
+  "early_stopping_rounds": 50,
+  "topk": 5000,
+  "AUC_val_bestmodel": 0.7008621096611023,
+  "fit_anos": [
+    2020,
+    2021
+  ],
+  "val_ano": 2022,
+  "holdout_ano": 2023,
+  "AUC_holdout": 0.7082497462238103,
+  "Brier_holdout": 0.10664616463353095,
+  "LogLoss_holdout": 0.35841405440785207,
+  "segundos": 2565.3
+}

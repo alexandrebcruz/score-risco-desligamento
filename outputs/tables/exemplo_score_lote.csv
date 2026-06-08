@@ -1,0 +1,4 @@
+cbo,cnae,uf,idade,escolaridade,tempo_vinculo_meses,tamanho_empresa,risco_involuntario_sjc_3m,risco_involuntario_sjc_6m,risco_involuntario_sjc_12m,nivel_involuntario_sjc,exposicao_involuntario_sjc,risco_fim_contrato_3m,risco_fim_contrato_6m,risco_fim_contrato_12m,nivel_fim_contrato,exposicao_fim_contrato
+252105,4711301,PA,33,superior,8,2,0.03647706088429248,0.07162354579782859,0.1381171592830035,cbo4_cnae2_tempo_tam_uf,51,0.00014239923709935542,0.00028477819665595483,0.0005694752946906467,cbo4_cnae2_tempo_tam_uf,51
+715210,4120400,AM,51,fundamental,40,4,0.05356879252916524,0.10426796952529771,0.19766412958166701,cbo4_cnae2_tempo_tam_uf,82,9.886662066460605e-05,0.0001977234667206451,0.00039540783887193065,cbo4_cnae2_tempo_tam_uf,82
+621005,0111301,TO,27,medio_completo,3,0,0.03196696083509287,0.0629120350851533,0.12186614601175105,cbo2_cnae2_tempo_uf,15541,0.06237954644216015,0.12086788506999069,0.22712672449868887,cbo2_cnae2_tempo_uf,15541

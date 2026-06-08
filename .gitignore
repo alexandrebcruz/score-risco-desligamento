@@ -1,0 +1,31 @@
+# ─── Microdados / dados pesados (regeneráveis, NÃO versionar) ───
+data/raw/
+data/interim/
+data/processed/
+*.parquet
+*.7z
+*.zip
+*.csv.gz
+
+# CSV/JSON pesados de saída (acima do limite do GitHub ou volumosos)
+outputs/tables/pgfn_*.csv
+outputs/**/*catboost_full.json
+
+# Binários de modelo e pools (regeneráveis via RunPod — ver CLAUDE.md)
+*.cbm
+outputs/**/*.quant
+outputs/**/borders_*.dat
+
+# Pod transitório (host/IP/pod_id)
+runpod/pod.json
+
+# ─── Python / ambiente ───
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+.pytest_cache/
+
+# ─── Manter (de-para pequenos) ───
+!data/dicts/
