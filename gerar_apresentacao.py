@@ -200,7 +200,9 @@ def divisor(titulo, sub, n):
     fig = new_slide(); ax = fig.add_axes([0, 0, 1, 1]); ax.axis("off"); ax.set_xlim(0,1); ax.set_ylim(0,1)
     ax.add_patch(Rectangle((0,0),1,1,color=NAVY))
     ax.add_patch(Rectangle((0.06,0.52),0.18,0.01,color="#f4a722"))
-    ax.text(0.06, 0.60, titulo, color="white", fontsize=34, weight="bold")
+    # título adaptativo: encolhe quando longo, p/ não sair da área do slide
+    fs = 34 if len(titulo) <= 30 else max(24, int(34 * 30 / len(titulo)))
+    ax.text(0.06, 0.60, titulo, color="white", fontsize=fs, weight="bold")
     ax.text(0.06, 0.43, sub, color="#9fc0e8", fontsize=16)
     pages.append(fig)
 divisor("Categorização do risco", "Do score contínuo a faixas interpretáveis — maximizando o ganho de informação", "6")

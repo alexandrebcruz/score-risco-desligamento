@@ -143,11 +143,12 @@ HTML = r"""<!DOCTYPE html>
   .bi{color:#f4a722;font-weight:bold;margin-right:.5em;}
   .chartwrap{position:absolute;left:43%;top:16%;width:55%;height:80%;display:flex;flex-direction:column;}
   .ctrls{flex:0 0 auto;margin-bottom:.4vh;}
-  .grp{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;}
-  .grp button{font-size:clamp(7px,1.15vh,10px);padding:1px 6px;border-radius:5px;border:1px solid #bbb;background:#f7f7f7;cursor:pointer;font-weight:600;}
-  .chips{display:flex;flex-wrap:wrap;gap:2px;}
-  .chip{width:clamp(12px,1.95vh,18px);height:clamp(12px,1.95vh,18px);border-radius:4px;border:1.5px solid var(--c);
-        background:var(--c);color:#fff;font-size:clamp(6px,1.0vh,9px);font-weight:700;cursor:pointer;padding:0;line-height:1;}
+  /* controles em unidades --u (1% da largura do palco) -> escalam junto com o slide */
+  .grp{display:flex;flex-wrap:wrap;gap:calc(var(--u)*0.35);margin-bottom:calc(var(--u)*0.35);}
+  .grp button{font-size:calc(var(--u)*0.92);padding:calc(var(--u)*0.12) calc(var(--u)*0.6);border-radius:5px;border:1px solid #bbb;background:#f7f7f7;cursor:pointer;font-weight:600;}
+  .chips{display:flex;flex-wrap:wrap;gap:calc(var(--u)*0.2);}
+  .chip{width:calc(var(--u)*1.5);height:calc(var(--u)*1.5);border-radius:4px;border:1.5px solid var(--c);
+        background:var(--c);color:#fff;font-size:calc(var(--u)*0.82);font-weight:700;cursor:pointer;padding:0;line-height:1;}
   .chip.off{background:#fff;color:#bbb;border-color:#ddd;}
   svg{flex:1 1 auto;width:100%;min-height:0;}
   .grid{stroke:#e6e6e6;stroke-width:1;} .ax{stroke:#999;stroke-width:1;} .tk{fill:#666;font-size:11px;} .al{fill:#1b2430;font-size:12px;}
