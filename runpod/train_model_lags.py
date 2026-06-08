@@ -31,8 +31,12 @@ LAG_COLS = [f"{f}_{k}_lag{L}" for f in LAG_FEATURES for L in LAGS for k in ("n",
 NUM = BASE_NUM + LAG_COLS
 FEATURES = CAT + NUM
 HOLDOUT_ANO = 2023
-EARLY = 50
-MAX_ITER = 3000
+# Tuning: ajustáveis por env p/ calibrar best_iteration ~1000 sem reconstruir pools.
+EARLY = int(os.environ.get("LAGS_EARLY", "100"))
+MAX_ITER = int(os.environ.get("LAGS_MAX_ITER", "4000"))
+DEPTH = int(os.environ.get("LAGS_DEPTH", "6"))
+LR = float(os.environ.get("LAGS_LR", "0.01"))
+KEEP_POOLS = os.environ.get("LAGS_KEEP_POOLS", "1") == "1"  # manter pools p/ re-fit no tuning
 
 t0 = time.time()
 def _rss():
@@ -56,7 +60,7 @@ def load(anos):
 from catboost import CatBoostClassifier, Pool
 from sklearn.metrics import roc_auc_score, brier_score_loss, log_loss
 cat_idx = [FEATURES.index(c) for c in CAT]
-PARAMS = dict(iterations=MAX_ITER, depth=8, learning_rate=0.08,
+PARAMS = dict(iterations=MAX_ITER, depth=DEPTH, learning_rate=LR,
               loss_function="Logloss", eval_metric="Logloss",
               early_stopping_rounds=EARLY, use_best_model=True, od_type="Iter",
               task_type="GPU", devices="0", boosting_type="Plain", max_ctr_complexity=1,
@@ -87,10 +91,10 @@ def poolval(nome):
     log(f"poolval {nome} salvo (quantizado) em disco")
 
 def fit(nome):
-    """Processo isolado: carrega os 2 pools quantizados (leves) e treina."""
+    """Processo isolado: carrega os 2 pools quantizados (leves) e treina.
+    Re-treina sempre (tuning). depth/LR vêm de env LAGS_DEPTH/LAGS_LR."""
     cbm = f"{OUT}/catboost_lags_{nome}.cbm"
-    if os.path.exists(cbm): log(f"{nome}: já existe — pulando"); return
-    log(f"=== fit {nome}: carregando pools quantizados do disco ===")
+    log(f"=== fit {nome}: depth={DEPTH} lr={LR} max_iter={MAX_ITER} early={EARLY} ===")
     p_fit = Pool(data="quantized://" + _ppath(nome, "fit"))
     p_val = Pool(data="quantized://" + _ppath(nome, "val"))
     m = CatBoostClassifier(**PARAMS)
@@ -98,12 +102,12 @@ def fit(nome):
     m.fit(p_fit, eval_set=p_val)
     bi = int(m.get_best_iteration())
     m.save_model(cbm)
-    json.dump({"best_iteration": bi}, open(f"{OUT}/meta_{nome}.json", "w"))
-    # libera disco dos pools desse modelo
-    for r in ("fit", "val"):
-        try: os.remove(_ppath(nome, r))
-        except OSError: pass
-    log(f"{nome} OK | best_iteration={bi} | salvo {cbm} (pools removidos do disco)")
+    json.dump({"best_iteration": bi, "depth": DEPTH, "learning_rate": LR}, open(f"{OUT}/meta_{nome}.json", "w"))
+    if not KEEP_POOLS:
+        for r in ("fit", "val"):
+            try: os.remove(_ppath(nome, r))
+            except OSError: pass
+    log(f"{nome} OK | best_iteration={bi} | depth={DEPTH} lr={LR} | salvo {cbm}")
 
 def evaluate():
     mA = CatBoostClassifier(); mA.load_model(f"{OUT}/catboost_lags_A.cbm")
