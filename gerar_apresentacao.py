@@ -242,11 +242,11 @@ def tabela_cats():
     d = CATS.copy()
     cell = []
     for _, r in d.iterrows():
-        cell.append([int(r.categoria), f"{r.prob_min:.3f}–{r.prob_max:.3f}",
+        cell.append([int(r.categoria), f"{r.prob_min*100:.1f}–{r.prob_max*100:.1f}%",
                      f"{r.n/1e6:.1f}", f"{r.taxa_y*100:.1f}%", f"{r.prob_media*100:.1f}%", f"{r.lift:.2f}×"])
     col = ["cat", "faixa de prob.", "n (mi)", "taxa real", "prob. méd.", "lift"]
     tbl = ax.table(cellText=cell, colLabels=col, loc="center", cellLoc="center")
-    tbl.auto_set_font_size(False); tbl.set_fontsize(7.3); tbl.scale(1, 1.02)
+    tbl.auto_set_font_size(False); tbl.set_fontsize(9.2); tbl.scale(1, 1.22)
     for j in range(len(col)):
         c = tbl[0, j]; c.set_facecolor(NAVY); c.set_text_props(color="white", weight="bold")
     for i in range(1, len(cell) + 1):
