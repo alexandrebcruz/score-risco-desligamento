@@ -271,29 +271,40 @@ divisor("Personas das categorias", "Quem é cada grupo de risco — segundo as v
 # ======================= 10. MÉTODO PERSONAS + GRADIENTE =======================
 def metodo_persona():
     fig = new_slide(); header(fig, "PERSONAS · MÉTODO", "Como cada categoria foi perfilada")
-    bullet(fig, 0.05, 0.76, [
+    bullet(fig, 0.05, 0.74, [
         (False, "Duas medidas por característica"),
-        (True, "Composição interna: do que a categoria é feita (% de cada valor)."),
-        (True, "Distintividade (lift): share na categoria ÷ share na base —"),
+        (True, "Composição interna — do que a categoria é feita (% de cada valor)."),
+        (True, "Distintividade (lift) — share na categoria ÷ share na base;"),
         (True, "o que é desproporcionalmente comum ali (piso de 5%)."),
         (False, "Tradução"),
-        (True, "Códigos CBO/CNAE/vínculo traduzidos pelo dicionário da RAIS."),
-    ], fs=12.6, dy=0.066)
-    # gradiente: taxa_y barras + linhas % público e tempo
-    ax = fig.add_axes([0.07, 0.12, 0.86, 0.40])
-    p = PERS.sort_values("categoria")
-    ax.bar(p.categoria, p["taxa_y"], color=[gcolor(c) for c in p.categoria], alpha=.85)
-    ax.set_ylabel("taxa real (%)", color=INK); ax.set_xlabel("categoria")
-    ax.set_title("O gradiente: do setor público (estável) à construção civil (alta rotatividade)",
-                 fontsize=11.5, weight="bold")
-    ax2 = ax.twinx()
-    ax2.plot(p.categoria, p["publico%"], color="#1a9850", lw=2, marker="o", ms=3, label="% setor público")
-    ax2.plot(p.categoria, p["tempo_anos"], color="#7a3b9e", lw=2, marker="s", ms=3, label="tempo médio (anos)")
-    ax2.set_ylabel("% público  /  tempo (anos)")
-    ax2.legend(loc="upper center", fontsize=9, ncol=2)
-    ax.grid(axis="y", alpha=.25)
+        (True, "Códigos de CBO/CNAE/tipo de vínculo traduzidos pelo dicionário da RAIS."),
+        (False, "Leitura"),
+        (True, "Os indicadores são lidos ao longo das 23 categorias ordenadas"),
+        (True, "por risco — como o perfil muda do menor para o maior risco."),
+    ], fs=13.2, dy=0.072)
     footer(fig, "10"); pages.append(fig)
 metodo_persona()
+
+def gradiente_persona():
+    fig = new_slide(); header(fig, "PERSONAS · GRADIENTE", "Do setor público à construção civil")
+    p = PERS.sort_values("categoria")
+    ax = fig.add_axes([0.085, 0.215, 0.83, 0.535])
+    ax.bar(p.categoria, p["taxa_y"], color=[gcolor(c) for c in p.categoria], alpha=.85)
+    ax.set_ylabel("taxa real de dispensa (%)", color=INK)
+    ax.set_xlabel("categoria  (1 = menor risco · 23 = maior risco)")
+    ax.set_xticks(range(1, 24)); ax.tick_params(labelsize=8.5); ax.set_ylim(0, 78)
+    ax2 = ax.twinx()
+    ax2.plot(p.categoria, p["publico%"], color="#1a9850", lw=2.2, marker="o", ms=4, label="% setor público")
+    ax2.plot(p.categoria, p["tempo_anos"], color="#7a3b9e", lw=2.2, marker="s", ms=4, label="tempo médio de vínculo (anos)")
+    ax2.set_ylabel("% setor público   /   tempo (anos)")
+    ax2.legend(loc="upper center", fontsize=10.5, ncol=2, frameon=True, framealpha=.95)
+    ax.grid(axis="y", alpha=.25)
+    fig.text(0.085, 0.115, "Conforme o risco sobe (esquerda → direita): o setor público desaba (linha verde) e o tempo de vínculo",
+             fontsize=11, color=GREY)
+    fig.text(0.085, 0.078, "encurta (linha roxa) — do servidor público estável ao operário da construção em micro construtora.",
+             fontsize=11, color=GREY)
+    footer(fig, "11"); pages.append(fig)
+gradiente_persona()
 
 # ======================= 11–15. PERSONAS POR GRUPO =======================
 PERSONA_TXT = {
@@ -358,7 +369,7 @@ def grupo_slide(nome, cats, cor, n):
     footer(fig, n); pages.append(fig)
 
 for i, (nome, cats, cor) in enumerate(GROUPS):
-    grupo_slide(nome, cats, cor, str(11 + i))
+    grupo_slide(nome, cats, cor, str(12 + i))
 
 # ======================= 16. FECHAMENTO =======================
 def fecho():
