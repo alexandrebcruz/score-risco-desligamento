@@ -121,21 +121,32 @@ contexto()
 
 # ======================= 3. PREPARAÇÃO DOS DADOS =======================
 def preparo():
-    fig = new_slide(); header(fig, "DESENVOLVIMENTO · DADOS", "Preparação: features e a correção que destravou o modelo")
+    fig = new_slide(); header(fig, "DESENVOLVIMENTO · DADOS", "Preparação: features e harmonização de códigos")
     bullet(fig, 0.05, 0.75, [
         (False, "22 features por vínculo (todas disponíveis na RAIS)"),
         (True, "Ocupação (CBO) e setor (CNAE) — em níveis hierárquicos (6→1 dígito)"),
         (True, "Tempo de vínculo, idade, tipo de contrato, faixa de remuneração,"),
         (True, "tamanho e natureza da empresa, jornada, afastamentos, UF."),
-        (False, "Correção crítica de harmonização entre anos"),
-        (True, "Códigos mudaram de formato entre 2022 e 2023 (ex.: faixa salarial"),
-        (True, "'02'→'2'; afastamento '99'→'999'). Sem corrigir, features-chave"),
-        (True, "ficavam 'desconhecidas' no teste de 2023."),
+        (False, "Harmonização de códigos entre anos (pré-processamento)"),
+        (True, "Alguns códigos mudaram de formato entre 2022 e 2023; sem"),
+        (True, "padronizar, o modelo veria categorias 'novas' (desconhecidas)"),
+        (True, "no teste de 2023. A normalização garante consistência."),
     ], fs=12.8, dy=0.067)
-    ax = fig.add_axes([0.55, 0.14, 0.42, 0.60]); img = plt.imread("outputs/figures/impacto_correcao_auc.png")
-    ax.imshow(img); ax.axis("off")
-    fig.text(0.55, 0.10, "Impacto da correção: o ensemble saltou de 0,642 → 0,741 de AUC "
-             "(+0,099) só harmonizando os códigos.", fontsize=10.5, color=GREY)
+    # mini-tabela ilustrativa da normalização (parte do pré-processamento do modelo)
+    ax = fig.add_axes([0.58, 0.22, 0.38, 0.40]); ax.axis("off")
+    cell = [["faixa salarial", "02", "2", "2"],
+            ["afastamento", "99", "999", "99"],
+            ["CBO (militar)", "010105", "10105", "010105"]]
+    col = ["campo", "≤ 2022", "em 2023", "→ normalizado"]
+    tbl = ax.table(cellText=cell, colLabels=col, loc="center", cellLoc="center")
+    tbl.auto_set_font_size(False); tbl.set_fontsize(11); tbl.scale(1, 1.8)
+    for j in range(len(col)):
+        c = tbl[0, j]; c.set_facecolor(NAVY); c.set_text_props(color="white", weight="bold")
+    for i in range(1, 4):
+        tbl[i, 3].set_text_props(color="#1a9850", weight="bold")
+    fig.text(0.58, 0.135, "Ex.: a categoria majoritária de afastamento ('99', ~84% dos\n"
+             "vínculos) virava '999' em 2023 — vista como desconhecida sem o ajuste.",
+             fontsize=10, color=GREY)
     footer(fig, "3"); pages.append(fig)
 preparo()
 
@@ -356,7 +367,7 @@ def fecho():
     ax.add_patch(Rectangle((0.06,0.70),0.18,0.01,color="#f4a722"))
     ax.text(0.06, 0.78, "Síntese", color="white", fontsize=30, weight="bold")
     pts = ["Ensemble CatBoost cross-temporal prevê dispensa sem justa causa com AUC 0,741 e boa calibração.",
-           "A harmonização de códigos entre anos foi o maior ganho (+0,099 de AUC).",
+           "A harmonização de códigos entre anos garante a consistência do modelo no teste de 2023.",
            "O score foi fatiado em 23 categorias ótimas (máximo ganho de informação mantendo a ordenação).",
            "As personas vão do servidor público estável (risco ~1%) ao operário da construção em micro",
            "    construtora (risco ~67%) — o modelo capta rotatividade estrutural, não só contrato temporário."]
