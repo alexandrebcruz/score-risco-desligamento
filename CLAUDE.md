@@ -226,6 +226,12 @@ Os 3 gráficos (KM, extrapolação Weibull, gráfico-caixa) + 1 divisor também 
 **Apêndice B** do deck (`gerar_apresentacao.py`, slides `B`/`B1`–`B3`): B1 = teoria KM + curvas;
 B2 = teoria Weibull + extrapolação; B3 = gráfico-caixa + tabela Q1/med/méd/Q3 monotonizada.
 
+**Deck em HTML** (`gerar_apresentacao_html.py` → `outputs/apresentacao_risco_desligamento.html`):
+roda o deck via `runpy` exportando 1 PNG por slide (env `DECK_DUMP_PNG`), embute os slides como
+PNG base64 e troca os slides B1/B2 por gráficos SVG **interativos** (seleção de curvas por
+categoria/grupo, escala-Y dinâmica, tooltip), reaproveitando o motor de `sobrevivencia_interativa.html`.
+Autossuficiente/offline; navegação por ←/→. Índices B1/B2 = `NP-3`/`NP-2`.
+
 Aprendizados (não reintroduzir):
 - **Sazonalidade de dezembro** no hazard (spike ×1,3–4,3) + **rampa nos meses 1–3**; o Weibull
   liso NÃO captura. Logo **extrapolação >12m é SUPOSIÇÃO**; padrão-ouro = coorte sintética com
