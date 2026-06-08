@@ -222,6 +222,10 @@ Rodar nesta ordem (cada script lê a saída do anterior):
    linha=mediana, losango=média, **5 personas marcadas por cor + faixas de fundo + rótulos**.
    Saída: `outputs/figures/estatisticas_tempo_categorias_2023.png`.
 
+Os 3 gráficos (KM, extrapolação Weibull, gráfico-caixa) + 1 divisor também entram como
+**Apêndice B** do deck (`gerar_apresentacao.py`, slides `B`/`B1`–`B3`): B1 = teoria KM + curvas;
+B2 = teoria Weibull + extrapolação; B3 = gráfico-caixa + tabela Q1/med/méd/Q3 monotonizada.
+
 Aprendizados (não reintroduzir):
 - **Sazonalidade de dezembro** no hazard (spike ×1,3–4,3) + **rampa nos meses 1–3**; o Weibull
   liso NÃO captura. Logo **extrapolação >12m é SUPOSIÇÃO**; padrão-ouro = coorte sintética com

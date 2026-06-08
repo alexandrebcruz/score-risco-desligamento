@@ -466,6 +466,74 @@ for i, (nome, cats, cor) in enumerate(GROUPS):
     grupo_slide(nome, cats, cor, f"A{i + 2}", pers=PERS_PRIV, persona_txt=PERSONA_TXT_PRIV,
                 inds_spec=INDS_PRIV, base_lbl="do privado")
 
+# ======================= APÊNDICE — TEMPO ATÉ O DESLIGAMENTO =======================
+divisor("Apêndice — Quando ocorre o desligamento",
+        "Curvas de sobrevivência e tempo até a dispensa, por categoria de risco", "B")
+
+# B1 — teoria da curva de sobrevivência + gráfico KM
+def surv_curva():
+    fig = new_slide(); header(fig, "TEMPO ATÉ O DESLIGAMENTO · SOBREVIVÊNCIA",
+                              "Curvas de sobrevivência por categoria (Kaplan-Meier)")
+    bullet(fig, 0.05, 0.76, [
+        (False, "A ideia"),
+        (True, "O modelo prevê QUEM/SE é desligado; a sobrevivência mede QUANDO."),
+        (True, "S(t) = probabilidade de continuar empregado após t meses."),
+        (False, "Dos microdados (RAIS)"),
+        (True, "Evento = dispensa s/ justa causa;  tempo = mês do desligamento."),
+        (True, "Censura: quem fica ativo (ou sai por outro motivo) não é 'evento'."),
+        (False, "Kaplan–Meier"),
+        (True, "S(t) = Π (nₘ−dₘ)/nₘ — usa a censura sem viés, mês a mês."),
+        (True, "RMST(12) = área sob S(t) = meses esperados de emprego no ano."),
+    ], fs=12.6, dy=0.063)
+    ax = fig.add_axes([0.50, 0.10, 0.48, 0.70])
+    ax.imshow(plt.imread("outputs/figures/sobrevivencia_categorias_2023.png")); ax.axis("off")
+    footer(fig, "B1"); pages.append(fig)
+surv_curva()
+
+# B2 — teoria da extrapolação Weibull + gráfico extrapolado
+def surv_weibull():
+    fig = new_slide(); header(fig, "TEMPO ATÉ O DESLIGAMENTO · EXTRAPOLAÇÃO",
+                              "Estendendo as curvas além de 12 meses (Weibull)")
+    bullet(fig, 0.05, 0.76, [
+        (False, "O problema"),
+        (True, "12 meses de dado não enxergam além de 12m (a curva ainda está alta)."),
+        (False, "Solução: forma paramétrica de Weibull"),
+        (True, "S(t) = exp(−(t/λ)ᵖ);  hazard ∝ t^(p−1)  (p>1 sobe, p<1 cai)."),
+        (True, "Ajuste por regressão pura: ln(−ln S) = p·ln t + ln α (OLS, 12 pts)."),
+        (True, "R² médio ≈ 0,99 — extrapola a curva até 36 meses (tracejado)."),
+        (False, "Ressalva"),
+        (True, "Ignora a sazonalidade de dezembro; projeção >12m é suposição."),
+    ], fs=12.6, dy=0.063)
+    ax = fig.add_axes([0.50, 0.10, 0.48, 0.70])
+    ax.imshow(plt.imread("outputs/figures/sobrevivencia_weibull_extrap_2023.png")); ax.axis("off")
+    footer(fig, "B2"); pages.append(fig)
+surv_weibull()
+
+# B3 — gráfico-caixa (Q1/mediana/média/Q3) + tabela por categoria
+def surv_estatisticas():
+    fig = new_slide(); header(fig, "TEMPO ATÉ O DESLIGAMENTO · ESTATÍSTICAS",
+                              "Q1, mediana, média e Q3 por categoria (meses)")
+    ax = fig.add_axes([0.025, 0.07, 0.58, 0.74])
+    ax.imshow(plt.imread("outputs/figures/estatisticas_tempo_categorias_2023.png")); ax.axis("off")
+    # tabela à direita (estatísticas monotonizadas por isotônico)
+    STAT = pd.read_csv("outputs/tables/sobrevivencia_weibull_estatisticas_mono_2023.csv").sort_values("categoria")
+    ax2 = fig.add_axes([0.625, 0.04, 0.355, 0.78]); ax2.axis("off")
+    cell = [[int(r.categoria), f"{r.q1_meses_mono:.0f}", f"{r.mediana_meses_mono:.0f}",
+             f"{r.media_meses_mono:.0f}", f"{r.q3_meses_mono:.0f}"] for _, r in STAT.iterrows()]
+    col = ["cat", "Q1", "med", "méd", "Q3"]
+    tbl = ax2.table(cellText=cell, colLabels=col, loc="center", cellLoc="center")
+    tbl.auto_set_font_size(False); tbl.set_fontsize(6.6); tbl.scale(1, 1.04)
+    for j in range(len(col)):
+        c = tbl[0, j]; c.set_facecolor(NAVY); c.set_text_props(color="white", weight="bold")
+    for i in range(1, len(cell) + 1):
+        tbl[i, 0].set_facecolor(gcolor(cell[i-1][0])); tbl[i, 0].set_text_props(color="white", weight="bold")
+        if i % 2 == 0:
+            for j in range(1, len(col)): tbl[i, j].set_facecolor("#f4f7fb")
+    fig.text(0.625, 0.022, "Caixa = IQR · linha = mediana · losango = média (isotônico).",
+             fontsize=7.5, color=GREY)
+    footer(fig, "B3"); pages.append(fig)
+surv_estatisticas()
+
 # ======================= salvar =======================
 with PdfPages(PDF) as pdf:
     for f in pages:
