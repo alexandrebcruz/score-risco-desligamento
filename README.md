@@ -29,6 +29,7 @@ Alvo padrão: `motivo_unificado == "involuntario_sjc"` (dispensa sem justa causa
 4. [Benchmark supervisionado: CatBoost → ensemble → lags](#4-benchmark-supervisionado)
 5. [A correção de normalização (o maior ganho do projeto)](#5-a-correção-de-normalização)
 6. [Da probabilidade às personas (predict → categorias → personas)](#6-da-probabilidade-às-personas)
+   - [6.5 Tempo até o desligamento — curvas de sobrevivência](#65-tempo-até-o-desligamento--curvas-de-sobrevivência)
 7. [PGFN — histórico de dívidas das empresas](#7-pgfn--histórico-de-dívidas)
 8. [Infraestrutura RunPod](#8-infraestrutura-runpod)
 9. [Estrutura do repositório](#9-estrutura-do-repositório)
@@ -234,6 +235,39 @@ Saída: [`outputs/apresentacao_risco_desligamento.pdf`](outputs/apresentacao_ris
 risco) → CLT na indústria/saúde → comércio e serviços em pequenas empresas → **operário
 da construção civil em micro construtora** (maior risco: 66,7% desligados no ano). O
 modelo capta a **rotatividade estrutural da construção mesmo em CLT indeterminado**.
+
+### 6.5 Tempo até o desligamento — curvas de sobrevivência
+
+Enquanto o modelo responde **"quem/se"** será desligado (probabilidade), esta extensão
+responde **"quando"**, por categoria de risco, usando **análise de sobrevivência**. A chave
+é que a RAIS limpa já guarda `mes_deslig` (mês do desligamento, 1–12) e `motivo_unificado` —
+ou seja, o *tempo até o evento* já existe no dado, sem precisar de um modelo novo.
+
+É **agnóstico ao modelo** (só depende do parquet categorizado + interim RAIS) e roda
+localmente. Para reproduzir com outro modelo, refaça a §6 (predict→categoria) e rode os 5
+scripts abaixo na ordem (cada um lê a saída do anterior):
+
+| # | script | o que faz | saída principal |
+|---|---|---|---|
+| 1 | `curva_sobrevivencia_categorias.py` | **Kaplan-Meier** por categoria (evento = dispensa s/ justa causa; censura = ativo em dez ou saída por outro motivo). Alinha interim↔categorizado por posição e **valida `evento==y`** em 100% das linhas. | `sobrevivencia_km_2023.csv`, `..._resumo_2023.csv` (RMST, mediana), figura |
+| 2 | `extrap_weibull_categorias.py` | **Weibull por regressão pura** (cloglog OLS nos 12 pontos, `S(t)=exp(−α·tᵖ)`), extrapola até 36m; calcula **média, Q1, mediana, Q3** em forma fechada | `..._weibull_params/extrap/estatisticas_2023.csv`, figura |
+| 3 | `monotoniza_estatisticas.py` | impõe **monotonicidade** (isotonic/PAVA) nas estatísticas vs categoria | `..._weibull_estatisticas_mono_2023.csv` |
+| 4 | `gerar_html_sobrevivencia.py` | **HTML interativo** (offline): seleção por categoria/persona, escala-Y dinâmica, toggle de extrapolação, tooltip com S(t)+mediana+IQR | `outputs/sobrevivencia_interativa.html` |
+| 5 | `grafico_estatisticas_categorias.py` | **gráfico-caixa** por categoria (IQR/mediana/média, Y log) com as 5 personas marcadas | `outputs/figures/estatisticas_tempo_categorias_2023.png` |
+
+**Fórmulas (Weibull `S(t)=exp(−(t/λ)ᵖ)`):** ajuste por `ln(−ln S)=p·ln t+ln α`; média
+`E[T]=λ·Γ(1+1/p)`; quantil `t_q=λ·(−ln(1−q))^(1/p)`; `RMST(12)=Σ S(m)`.
+
+**Resultados (holdout 2023):** o ajuste Weibull tem R²≈0,992; mediana do tempo até o
+desligamento vai de **~5,6 meses** (categoria 23, operário da construção) a **anos** nas
+categorias de risco mínimo.
+
+> ⚠️ **Limites da extrapolação:** o hazard real tem **sazonalidade de dezembro** e **rampa
+> nos primeiros meses** que o Weibull liso não captura, e nas categorias de risco alto há
+> **frailty** (hazard decrescente, shape p<1) que desordena média/Q3 — por isso a versão
+> oficial usa **isotonic regression** e recomenda **mediana/Q1** para ranquear. Projeções
+> além de 12 meses são suposição; o padrão-ouro seria uma **coorte sintética** com a RAIS
+> 2024/2025 (recém-publicadas).
 
 ---
 

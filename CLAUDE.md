@@ -179,6 +179,61 @@ resumível; o pyarrow falha ao criar arquivo direto no mount `/mnt/d` → escrev
 
 ---
 
+## 6-B. Sobrevivência e tempo até desligamento (extensão da §6)
+
+Estima **quando** (não só "se") ocorre o desligamento, por categoria de risco, via análise
+de sobrevivência (Kaplan-Meier) + extrapolação Weibull. Roda **LOCALMENTE** (venv
+`/tmp/consig_venv`; precisa pandas/pyarrow/numpy/matplotlib; sempre `MPLCONFIGDIR=/tmp/mpl`).
+**Agnóstico ao modelo**: depende só do parquet categorizado (`categoria_risco`,
+`prob_desligamento`,`y`) + interim RAIS (`mes_deslig`,`motivo_unificado`). **Para OUTRO modelo:
+refaça a §6 (predict→categoria) e reaponte as constantes SRC/CATPARQ dos 5 scripts.**
+
+Rodar nesta ordem (cada script lê a saída do anterior):
+
+1. **`curva_sobrevivencia_categorias.py`** — Kaplan-Meier por categoria.
+   - `evento` = `motivo_unificado=="involuntario_sjc"`; `tempo` = `mes_deslig` (1..12);
+     censura = ativo (`mes_deslig==0`)→t=12; saída por OUTRO motivo no mês m→censura em m.
+   - **Alinhamento sem ID de pessoa**: lê o interim 2023 na MESMA ordem do predict
+     (`sorted(glob)`, `iter_batches`) e VALIDA `evento==y` (do parquet categorizado) em 100%
+     das linhas → garante a junção por posição (82.964.122 linhas). Cache `_surv_counts_2023.csv`.
+   - KM: `S(t)=Π (n−d)/n`; IC Greenwood; `RMST(12)=Σ_{m=0}^{11} S(m)` (= meses esperados de
+     emprego no ano); mediana só definida se S cruza 0,5 (só cats de risco alto, ~21–23).
+   - Saídas: `outputs/tables/sobrevivencia_km_2023.csv` (longo cat×mês), `..._resumo_2023.csv`,
+     `outputs/figures/sobrevivencia_categorias_2023.png`.
+2. **`extrap_weibull_categorias.py`** — Weibull por REGRESSÃO PURA (sem ancoragem).
+   - Ajuste: linearização cloglog `ln(−ln S)=p·ln t+ln α` por OLS nos **12 pontos** → shape p,
+     α, escala λ=α^(−1/p). Curva: `S(t)=exp(−α·t^p)` (não passa forçada por ponto nenhum;
+     extrapola até 36m). R² médio ≈ **0,992**.
+   - Estatísticas do tempo T (forma fechada): **média = λ·Γ(1+1/p)**; **quantil q:
+     t_q = λ·(−ln(1−q))^(1/p)** → Q1(0,25), mediana(0,5), Q3(0,75).
+   - Saídas: `..._weibull_params_2023.csv`, `..._weibull_extrap_2023.csv` (cat×mês 0..36),
+     `..._weibull_estatisticas_2023.csv`, `outputs/figures/sobrevivencia_weibull_extrap_2023.png`.
+3. **`monotoniza_estatisticas.py`** — impõe monotonicidade (decrescente com a categoria) via
+   **isotonic regression (PAVA ponderado por n)** em Q1/mediana/média/Q3. Q1 e mediana já saem
+   monotônicos; **média e Q3 têm inversões nas cats ~13–20 (frailty, shape p<1) → viram platô**.
+   Saída: `..._weibull_estatisticas_mono_2023.csv` (brutas + `_mono`). **Versão OFICIAL = isotônica.**
+   (Regressão log-linear/power-law foi testada como alternativa suave e DESCARTADA: distorce demais.)
+4. **`gerar_html_sobrevivencia.py`** — HTML interativo autossuficiente (offline, sem CDN):
+   seleção por categoria + 5 botões de persona/grupo de risco, escala-Y dinâmica, toggle
+   "Extrapolação Weibull (até 36m)" (tracejado), tooltip com S(t)+mediana+IQR, lista com
+   med/IQR/RMST. Lê km + resumo + weibull_extrap/params + estatisticas_mono.
+   Saída: `outputs/sobrevivencia_interativa.html`.
+5. **`grafico_estatisticas_categorias.py`** — gráfico-caixa por categoria (Y log): caixa=IQR(Q1–Q3),
+   linha=mediana, losango=média, **5 personas marcadas por cor + faixas de fundo + rótulos**.
+   Saída: `outputs/figures/estatisticas_tempo_categorias_2023.png`.
+
+Aprendizados (não reintroduzir):
+- **Sazonalidade de dezembro** no hazard (spike ×1,3–4,3) + **rampa nos meses 1–3**; o Weibull
+  liso NÃO captura. Logo **extrapolação >12m é SUPOSIÇÃO**; padrão-ouro = coorte sintética com
+  RAIS 2024/2025 (recém-publicadas — "Caminho C", ainda não implementado).
+- **Frailty**: cats de risco alto (17–20) têm shape p<1 (hazard decrescente) → média/Q3 saem fora
+  de ordem (a cauda extrapolada infla); **use mediana e Q1 para ranquear** (robustas, monotônicas).
+- Grupos de risco/personas (iguais ao deck): Mínimo[1,2], Baixo[3–6], Médio-Baixo[7–11],
+  Médio[12–17], Alto[18–23]. **Se mudar K/modelo e as categorias mudarem, reescreva esses ranges**
+  em `gerar_html_sobrevivencia.py` e `grafico_estatisticas_categorias.py`.
+
+---
+
 ## 7. Restrições de memória (aprendizados)
 - **RAM do container ~188 GB**: construir 2 Pools (132M+148M × 136 feat) estoura →
   use processos isolados + pools quantizados em disco (`quantized://`).
