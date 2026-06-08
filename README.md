@@ -232,9 +232,9 @@ Weibull e o gráfico-caixa Q1/mediana/média/Q3 (ver §6.5).
 autossuficiente/offline ([`outputs/apresentacao_risco_desligamento.html`](outputs/apresentacao_risco_desligamento.html)):
 roda o deck via `runpy` (exporta cada slide como **SVG vetorial** — `DECK_DUMP_FMT=svg`), embute
 os slides como **SVG inline** (não imagens raster: texto **selecionável** com fonte DejaVu embutida, dimensões idênticas ao PDF)
-e **substitui os 2 slides de sobrevivência (B1/B2) por gráficos SVG interativos** (seleção de curvas
-por categoria/grupo, escala-Y dinâmica, tooltip), reaproveitando o motor de `sobrevivencia_interativa.html`.
-Navegação por ←/→.
+e **substitui os 3 slides do apêndice de sobrevivência (B1/B2/B3) por gráficos SVG interativos**:
+B1/B2 = curvas (seleção por categoria/grupo, escala-Y dinâmica, tooltip); B3 = gráfico-caixa
+Q1/mediana/média/Q3 (hover na caixa/linha mostra os dados num box). Navegação por ←/→.
 
 > Outro modelo: regenere as etapas 1–4 (incl. `persona_categorias.py` **e**
 > `persona_categorias.py privado`) e **reescreva os textos narrativos das personas**

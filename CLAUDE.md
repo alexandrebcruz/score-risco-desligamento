@@ -230,12 +230,14 @@ B2 = teoria Weibull + extrapolação; B3 = gráfico-caixa + tabela Q1/med/méd/Q
 roda o deck via `runpy` exportando 1 **SVG vetorial** por slide (env `DECK_DUMP_PNG` + `DECK_DUMP_FMT=svg`,
 `svg.fonttype=none`), embute cada slide como **SVG inline** (não PNG; texto em `<text>` **selecionável**,
 com a fonte **DejaVu embutida via `@font-face`** base64 — métricas idênticas às do matplotlib; ids
-prefixados por slide `sNN_` p/ não colidir entre os 26 SVGs) e troca os slides B1/B2 por
-gráficos SVG **interativos** (seleção de curvas por categoria/grupo, escala-Y dinâmica, tooltip),
-reaproveitando o motor de `sobrevivencia_interativa.html`. Fontes/controles em `--u` (1% da largura do
-palco) p/ escalar com o slide; navegação fixa ao canto com `100dvh` (não some no tablet em paisagem).
-Autossuficiente/offline; navegação por ←/→. Índices B1/B2 = `NP-3`/`NP-2`. **Obs:** 3 slides (calibração+
-importância e o gráfico-caixa B3) ainda têm figuras raster embutidas via `imshow` (vêm de PNG pré-render).
+prefixados por slide `sNN_` p/ não colidir entre os 25 SVGs) e troca os slides **B1/B2/B3** por
+gráficos SVG **interativos**: B1/B2 = curvas de sobrevivência (seleção por categoria/grupo, escala-Y
+dinâmica, tooltip); **B3 = gráfico-caixa** Q1/mediana/média/Q3 (caixa=IQR, hover na caixa OU na linha
+da tabela realça e mostra os dados num box). Reaproveita o motor de `sobrevivencia_interativa.html`.
+Fontes/controles em `--u` (1% da largura do palco) p/ escalar com o slide; navegação fixa ao canto com
+`100dvh` (não some no tablet em paisagem). Autossuficiente/offline; navegação por ←/→.
+Índices B1/B2/B3 = `NP-3`/`NP-2`/`NP-1`. **Obs:** só o slide de desempenho (calibração+importância)
+ainda tem 2 figuras raster embutidas via `imshow` (vêm de PNG pré-render por outros scripts).
 
 Aprendizados (não reintroduzir):
 - **Sazonalidade de dezembro** no hazard (spike ×1,3–4,3) + **rampa nos meses 1–3**; o Weibull

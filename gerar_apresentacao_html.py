@@ -28,8 +28,8 @@ TMP = "/tmp/apresentacao_risco_desligamento.html"
 print("renderizando slides via gerar_apresentacao.py ...")
 ns = runpy.run_path("gerar_apresentacao.py")
 NP = len(ns["pages"])
-B1, B2 = NP - 3, NP - 2          # índices dos slides interativos (surv_curva, surv_weibull)
-print(f"{NP} slides; interativos: B1={B1}, B2={B2}")
+B1, B2, B3 = NP - 3, NP - 2, NP - 1   # slides interativos: surv_curva, surv_weibull, surv_estatisticas
+print(f"{NP} slides; interativos: B1={B1}, B2={B2}, B3={B3}")
 
 def inline_svg(path, pfx):
     """Insere o SVG do matplotlib inline, escalado p/ preencher o slide. Prefixa todos os
@@ -65,6 +65,7 @@ for k in ks:
                    "risco12": round(float(res.loc[k, "risco_deslig_12m_KM"]) * 100, 1),
                    "q1": round(float(mo["q1_meses_mono"]), 1),
                    "medm": round(float(mo["mediana_meses_mono"]), 1),
+                   "media": round(float(mo["media_meses_mono"]), 1),
                    "q3": round(float(mo["q3_meses_mono"]), 1)})
 DATA = json.dumps(series, ensure_ascii=False)
 GROUPS = [("Mínimo", [1, 2], "#1a9850"), ("Baixo", [3, 4, 5, 6], "#86cb66"),
@@ -127,6 +128,14 @@ def interactive_slide(kicker, title, txt, chart_id):
   </div>
 </div>'''
 
+def box_slide():
+    return '''<div class="slide cust">
+  <div class="hb"><span class="kick">TEMPO ATÉ O DESLIGAMENTO · ESTATÍSTICAS</span><span class="ttl">Q1, mediana, média e Q3 por categoria (meses)</span></div>
+  <div class="boxwrap"><svg id="svg-box" viewBox="0 0 600 470" preserveAspectRatio="xMidYMid meet"></svg></div>
+  <div class="boxtable" id="boxtable"></div>
+  <div class="boxhint">Passe o mouse numa categoria (caixa ou linha) para ver os dados</div>
+</div>'''
+
 # ---------- 4. monta todos os slides ----------
 slides = []
 for i in range(NP):
@@ -136,6 +145,8 @@ for i in range(NP):
     elif i == B2:
         slides.append(interactive_slide("TEMPO ATÉ O DESLIGAMENTO · EXTRAPOLAÇÃO",
                       "Estendendo as curvas além de 12 meses (Weibull)", B2_TXT, "weib"))
+    elif i == B3:
+        slides.append(box_slide())
     else:
         slides.append(f'<div class="slide">{inline_svg(f"{DUMP}/slide_{i:02d}.svg", f"s{i:02d}_")}</div>')
 SLIDES = "\n".join(slides)
@@ -180,6 +191,18 @@ HTML = r"""<!DOCTYPE html>
         background:var(--c);color:#fff;font-size:calc(var(--u)*0.82);font-weight:700;cursor:pointer;padding:0;line-height:1;}
   .chip.off{background:#fff;color:#bbb;border-color:#ddd;}
   .chartwrap svg{flex:1 1 auto;width:100%;min-height:0;}
+  /* slide B3: gráfico-caixa interativo + tabela */
+  .boxwrap{position:absolute;left:2%;top:15.5%;width:60%;height:82%;}
+  .boxwrap svg{width:100%;height:100%;}
+  .box{cursor:pointer;}
+  .boxtable{position:absolute;right:1.5%;top:15.5%;width:35%;height:79%;overflow:auto;}
+  .boxtable table{border-collapse:collapse;width:100%;font-size:calc(var(--u)*0.95);font-variant-numeric:tabular-nums;}
+  .boxtable th{background:var(--navy);color:#fff;padding:calc(var(--u)*0.15) calc(var(--u)*0.25);position:sticky;top:0;}
+  .boxtable td{padding:calc(var(--u)*0.1) calc(var(--u)*0.25);text-align:center;border-bottom:1px solid #eee;}
+  .boxtable td.ct{color:#fff;font-weight:700;}
+  .boxtable tr.hl td{background:#fff3cf;}
+  .boxtable tr.hl td.ct{filter:brightness(.85);}
+  .boxhint{position:absolute;left:2%;bottom:2.5%;color:var(--grey);font-size:calc(var(--u)*0.9);}
   .grid{stroke:#e6e6e6;stroke-width:1;} .ax{stroke:#999;stroke-width:1;} .tk{fill:#666;font-size:11px;} .al{fill:#1b2430;font-size:12px;}
   .cv{fill:none;stroke-width:1.7;} .ext{fill:none;stroke-width:1.4;stroke-dasharray:5 4;} .dt{stroke:#fff;stroke-width:.5;}
   .bound{stroke:#999;stroke-width:1;stroke-dasharray:2 3;} .guide{stroke:#888;stroke-dasharray:4 3;stroke-width:1;visibility:hidden;}
@@ -275,6 +298,61 @@ function makeChart(svgId, chipsId, grpId, showExt, xmax){
 }
 makeChart('svg-km','chips-km','grp-km',false,12);
 makeChart('svg-weib','chips-weib','grp-weib',true,36);
+
+/* ---------- slide B3: gráfico-caixa (Q1/mediana/média/Q3) interativo ---------- */
+function makeBoxChart(){
+  const svg=document.getElementById('svg-box'); if(!svg) return;
+  const NS='http://www.w3.org/2000/svg', W=600,HT=470,M={l:40,r:10,t:14,b:26},PW=W-M.l-M.r,PH=HT-M.t-M.b;
+  const n=DATA.length, fmt=v=>Math.round(v);
+  const l0=Math.log10(2), l1=Math.log10(3000);           // escala Y log (2..3000 meses)
+  const yPix=v=>M.t+(1-(Math.log10(v)-l0)/(l1-l0))*PH;
+  const xC=k=>M.l+((k-1)+0.5)/n*PW, bw=0.62*PW/n;
+  function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+  // bandas de fundo por persona + rótulo
+  GROUPS.forEach(g=>{ const x0=xC(g.cats[0])-bw/2-2, x1=xC(g.cats[g.cats.length-1])+bw/2+2;
+    svg.appendChild(el('rect',{x:x0,y:M.t,width:x1-x0,height:PH,fill:g.cor,opacity:0.08}));
+    const t=el('text',{x:(x0+x1)/2,y:M.t+9,'text-anchor':'middle','font-size':8,'font-weight':'bold',fill:g.cor}); t.textContent='Risco '+g.nome; svg.appendChild(t); });
+  // grade log + linhas de referência 12/24/36
+  [10,100,1000].forEach(v=>{ const y=yPix(v); svg.appendChild(el('line',{x1:M.l,y1:y,x2:W-M.r,y2:y,stroke:'#e6e6e6'}));
+    const t=el('text',{x:M.l-5,y:y+3,'text-anchor':'end','font-size':9,fill:'#666'}); t.textContent=v; svg.appendChild(t); });
+  [[12,'12m'],[24,'24m'],[36,'36m']].forEach(a=>{ const y=yPix(a[0]);
+    svg.appendChild(el('line',{x1:M.l,y1:y,x2:W-M.r,y2:y,stroke:'#999','stroke-dasharray':'3 2','stroke-width':0.8}));
+    const t=el('text',{x:M.l+2,y:y-2,'font-size':7.5,fill:'#777'}); t.textContent=a[1]; svg.appendChild(t); });
+  svg.appendChild(el('line',{x1:M.l,y1:M.t,x2:M.l,y2:M.t+PH,stroke:'#999'}));
+  svg.appendChild(el('line',{x1:M.l,y1:M.t+PH,x2:W-M.r,y2:M.t+PH,stroke:'#999'}));
+  const yl=el('text',{'text-anchor':'middle','font-size':8.5,fill:'#1b2430',transform:'translate(11,'+(M.t+PH/2)+') rotate(-90)'}); yl.textContent='tempo até desligamento (meses, log)'; svg.appendChild(yl);
+  // caixas: IQR (Q1–Q3) + mediana (linha) + média (losango)
+  const boxes={};
+  DATA.forEach(s=>{ const x=xC(s.k), cor=s.cor;
+    const g=el('g',{class:'box','data-k':s.k});
+    g.appendChild(el('rect',{x:x-bw/2,y:yPix(s.q3),width:bw,height:yPix(s.q1)-yPix(s.q3),fill:cor,'fill-opacity':0.45,stroke:cor,'stroke-width':1,class:'bx'}));
+    g.appendChild(el('line',{x1:x-bw/2,y1:yPix(s.medm),x2:x+bw/2,y2:yPix(s.medm),stroke:'#222','stroke-width':1.6}));
+    const my=yPix(s.media),d=3; g.appendChild(el('path',{d:'M '+x+' '+(my-d)+' L '+(x+d)+' '+my+' L '+x+' '+(my+d)+' L '+(x-d)+' '+my+' Z',fill:'#fff',stroke:'#222','stroke-width':1}));
+    const t=el('text',{x:x,y:M.t+PH+9,'text-anchor':'middle','font-size':7,fill:'#666'}); t.textContent=s.k; svg.appendChild(t);
+    g.appendChild(el('rect',{x:x-bw/2-1,y:M.t,width:bw+2,height:PH,fill:'transparent'}));
+    g.addEventListener('mouseenter',()=>boxHov(s.k,true));
+    g.addEventListener('mouseleave',()=>boxHov(s.k,false));
+    boxes[s.k]=g; svg.appendChild(g);
+  });
+  // tabela
+  const tb=document.getElementById('boxtable');
+  let html='<table><thead><tr><th>cat</th><th>Q1</th><th>med</th><th>méd</th><th>Q3</th></tr></thead><tbody>';
+  DATA.forEach(s=>{ html+='<tr data-k="'+s.k+'"><td class="ct" style="background:'+s.cor+'">'+s.k+'</td><td>'+fmt(s.q1)+'</td><td>'+fmt(s.medm)+'</td><td>'+fmt(s.media)+'</td><td>'+fmt(s.q3)+'</td></tr>'; });
+  tb.innerHTML=html+'</tbody></table>';
+  tb.querySelectorAll('tr[data-k]').forEach(r=>{ const k=+r.dataset.k;
+    r.addEventListener('mouseenter',()=>boxHov(k,true)); r.addEventListener('mouseleave',()=>boxHov(k,false)); });
+  // realce sincronizado (caixa <-> linha) + box de dados
+  function boxHov(k,on){
+    const g=boxes[k]; if(g){ const bx=g.querySelector('.bx'); bx.setAttribute('stroke-width',on?2.6:1); bx.setAttribute('fill-opacity',on?0.7:0.45); }
+    const row=tb.querySelector('tr[data-k="'+k+'"]'); if(row) row.classList.toggle('hl',on);
+    if(on){ const s=DATA.find(d=>d.k===k), r=svg.getBoundingClientRect();
+      tip.innerHTML='<b>Categoria '+k+'</b> · risco '+s.risco12+'%<br>Q1 <b>'+fmt(s.q1)+'</b> · mediana <b>'+fmt(s.medm)+'</b> · média <b>'+fmt(s.media)+'</b> · Q3 <b>'+fmt(s.q3)+'</b> meses<br>IQR (Q1–Q3): '+fmt(s.q1)+'–'+fmt(s.q3)+' meses';
+      tip.style.left=Math.min(r.left+xC(k)/W*r.width+10,window.innerWidth-210)+'px';
+      tip.style.top=(r.top+yPix(s.q3)/HT*r.height-8)+'px'; tip.style.visibility='visible';
+    } else tip.style.visibility='hidden';
+  }
+}
+makeBoxChart();
 </script>
 </body></html>"""
 
@@ -285,4 +363,4 @@ HTML = (HTML.replace("__FONTS__", FONTS)
 with open(TMP, "w", encoding="utf-8") as f:
     f.write(HTML)
 shutil.copy(TMP, OUT)
-print(f"FIM -> {OUT} ({len(HTML)/1024/1024:.1f} MB, {NP} slides, 2 interativos)")
+print(f"FIM -> {OUT} ({len(HTML)/1024/1024:.1f} MB, {NP} slides, 3 interativos: B1/B2/B3)")
