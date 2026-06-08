@@ -297,15 +297,18 @@ HTML = r"""<!DOCTYPE html>
   .boxtable tr.hl td.ct{filter:brightness(.85);}
   .boxhint{position:absolute;left:2%;bottom:2.5%;color:var(--grey);font-size:calc(var(--u)*0.9);}
   /* slide 5: desempenho (calibração SVG + importância interativa) */
-  .calibwrap{position:absolute;left:2.5%;top:15.5%;width:35%;height:44%;}
-  .calibwrap svg{width:100%;height:84%;}
+  .calibwrap{position:absolute;left:2.5%;top:15.5%;width:37%;height:82%;}
+  .calibwrap svg{width:100%;height:92%;}
   .capt{font-size:calc(var(--u)*0.82);color:var(--grey);margin-top:.3em;}
-  .featinfo{position:absolute;left:2.5%;top:61%;width:35%;height:35%;overflow:auto;background:#f4f7fb;border:1px solid #e3e9f1;border-radius:8px;padding:calc(var(--u)*0.7);}
+  /* box de detalhes flutua POR CIMA do gráfico de importância (economiza espaço) */
+  .featinfo{position:absolute;right:2.5%;bottom:4%;width:32%;max-height:60%;overflow:auto;z-index:6;
+            background:rgba(255,255,255,.97);border:1px solid #cdd5df;border-radius:8px;
+            padding:calc(var(--u)*0.7);box-shadow:0 3px 14px rgba(0,0,0,.20);}
   .featinfo .fi-h{font-weight:700;font-size:calc(var(--u)*1.05);color:var(--navy);margin-bottom:.3em;}
   .featinfo .fi-d{font-size:calc(var(--u)*0.92);color:var(--ink);line-height:1.4;}
   .featinfo .fi-ex{margin-top:.5em;font-size:calc(var(--u)*0.9);}
   .featinfo .fi-ex li{margin:.15em 0;color:#33404f;}
-  .impwrap{position:absolute;left:40.5%;top:14.5%;width:58%;height:83%;}
+  .impwrap{position:absolute;left:41%;top:14.5%;width:57%;height:83%;}
   .impwrap svg{width:100%;height:100%;}
   .imp-bar{cursor:pointer;}
   .grid{stroke:#e6e6e6;stroke-width:1;} .ax{stroke:#999;stroke-width:1;} .tk{fill:#666;font-size:11px;} .al{fill:#1b2430;font-size:12px;}
