@@ -8,17 +8,23 @@ import numpy as np, pandas as pd
 import pyarrow.parquet as pq
 import pyarrow.compute as pc
 
+import sys
 SRC = "outputs/predicoes_2023_ensemble_base_categorizado.parquet"
 KCOL = "categoria_risco"
+# modo "privado": exclui o setor público (natureza_setor=='1') — público-alvo do
+# consignado PRIVADO. Saída com sufixo _privado. Default: toda a base.
+MODO = sys.argv[1] if len(sys.argv) > 1 else "todos"
+FILTRO = [("natureza_setor", "!=", "1")] if MODO == "privado" else None
+SUF = "_privado" if MODO == "privado" else ""
 
 def ct(feat):
     """crosstab counts (categoria x valor) -> DataFrame [K, valor, n]."""
-    t = pq.read_table(SRC, columns=[KCOL, feat])
+    t = pq.read_table(SRC, columns=[KCOL, feat], filters=FILTRO)
     g = t.group_by([KCOL, feat]).aggregate([(KCOL, "count")])
     return g.to_pandas().rename(columns={f"{KCOL}_count": "n", feat: "valor"})
 
 def num_mean(feats):
-    t = pq.read_table(SRC, columns=[KCOL] + feats)
+    t = pq.read_table(SRC, columns=[KCOL] + feats, filters=FILTRO)
     g = t.group_by([KCOL]).aggregate([(f, "mean") for f in feats] + [(KCOL, "count")])
     return g.to_pandas()
 
@@ -85,7 +91,7 @@ def distinctive(feat, topn=2):
 cbo1_d = distinctive("cbo1"); cnae2_d = distinctive("cnae2"); uf_d = distinctive("uf")
 
 # --- monta tabela ---
-def col(df,c): return df[c] if c in df.columns else 0.0
+def col(df,c): return df[c] if c in df.columns else pd.Series(0.0, index=df.index)
 prof = pd.DataFrame({"categoria": base[KCOL].astype(int)})
 prof["n"]=base["n"].astype(int); prof["pct_total"]=base["pct_total"].round(2)
 prof["taxa_y"]=(base["y_mean"]*100).round(2); prof["prob_media"]=(base["prob_desligamento_mean"]*100).round(2)
@@ -103,7 +109,8 @@ prof["cbo1_distintivo"]=[ "; ".join(f"{v}({s*100:.0f}%/lift{l:.1f})" for v,s,l i
 prof["cnae2_distintivo"]=[ "; ".join(f"{v}({s*100:.0f}%/lift{l:.1f})" for v,s,l in cnae2_d.get(k,[])) for k in prof["categoria"]]
 prof["uf_distintiva"]=[ "; ".join(f"{v}({s*100:.0f}%/lift{l:.1f})" for v,s,l in uf_d.get(k,[])) for k in prof["categoria"]]
 
-prof.to_csv("outputs/tables/persona_categorias.csv", index=False)
+prof.to_csv(f"outputs/tables/persona_categorias{SUF}.csv", index=False)
+print(f"MODO={MODO} | total vínculos={int(prof['n'].sum()):,}")
 pd.set_option("display.width",250, "display.max_columns",60)
 print(prof.to_string(index=False))
-print("\nsalvo: outputs/tables/persona_categorias.csv")
+print(f"\nsalvo: outputs/tables/persona_categorias{SUF}.csv")

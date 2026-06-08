@@ -340,24 +340,28 @@ PERSONA_TXT = {
          "rotatividade ESTRUTURAL do setor: na cat 23, 2 em cada 3 são desligados no ano (66,7%)."]),
 }
 
-def grupo_slide(nome, cats, cor, n):
-    fig = new_slide(); header(fig, "PERSONAS · " + nome.upper(), PERSONA_TXT[nome][0], band=cor)
-    g = PERS[PERS.categoria.isin(cats)]
+def grupo_slide(nome, cats, cor, n, pers=None, persona_txt=None, inds_spec=None, base_lbl="da base"):
+    if pers is None: pers = PERS
+    if persona_txt is None: persona_txt = PERSONA_TXT
+    if inds_spec is None:
+        inds_spec = [("CLT indet.", "clt_indet%"), ("Estatutário", "estatut%"),
+                     ("Setor público", "publico%"), ("Simples", "simples%"),
+                     ("Superior", "superior%"), ("Micro/peq.", "micro_peq%")]
+    fig = new_slide(); header(fig, "PERSONAS · " + nome.upper(), persona_txt[nome][0], band=cor)
+    g = pers[pers.categoria.isin(cats)]
     wn = g["n"].values
     def wavg(c): return float(np.average(g[c], weights=wn))
-    taxa = wavg("taxa_y"); ntot = g["n"].sum(); pct = 100 * ntot / PERS["n"].sum()
+    taxa = wavg("taxa_y"); ntot = g["n"].sum(); pct = 100 * ntot / pers["n"].sum()
     # faixa textual
     fig.text(0.05, 0.79, f"Categorias {cats[0]}–{cats[-1]}  ·  risco {g.taxa_y.min():.1f}%–{g.taxa_y.max():.1f}%  ·  "
-             f"{ntot/1e6:.1f} mi de vínculos ({pct:.0f}% da base)", fontsize=12.5, color=cor, weight="bold")
+             f"{ntot/1e6:.1f} mi de vínculos ({pct:.0f}% {base_lbl})", fontsize=12.5, color=cor, weight="bold")
     # texto persona
-    for i, t in enumerate(PERSONA_TXT[nome][1]):
+    for i, t in enumerate(persona_txt[nome][1]):
         fig.text(0.05, 0.70 - i*0.066, "▸ " + t, fontsize=12.4, color=INK,
                  wrap=True)
     # indicadores (barras horizontais)
     ax = fig.add_axes([0.135, 0.10, 0.355, 0.34])
-    inds = [("CLT indet.", wavg("clt_indet%")), ("Estatutário", wavg("estatut%")),
-            ("Setor público", wavg("publico%")), ("Simples", wavg("simples%")),
-            ("Superior", wavg("superior%")), ("Micro/peq.", wavg("micro_peq%"))]
+    inds = [(lab, wavg(coln)) for lab, coln in inds_spec]
     labels = [a for a, _ in inds][::-1]; vals = [b for _, b in inds][::-1]
     ax.barh(labels, vals, color=cor, alpha=.85)
     for y, v in enumerate(vals): ax.text(min(v+1.5, 96), y, f"{v:.0f}%", va="center", fontsize=9)
@@ -395,6 +399,72 @@ def fecho():
             "revisão humana e cuidado com vieses (setor, escolaridade, região).", color="#9fc0e8", fontsize=11)
     pages.append(fig)
 fecho()
+
+# ======================= APÊNDICE: consignado privado (sem setor público) =======================
+PERS_PRIV = pd.read_csv("outputs/tables/persona_categorias_privado.csv")
+PERSONA_TXT_PRIV = {
+    "Risco Mínimo": ("Veteranos de banco e de grandes empresas estáveis",
+        ["Setor financeiro (bancos — CNAE 64, lift 11×) e serviços essenciais/utilities (saneamento, correio); "
+         "grandes empregadores privados.",
+         "Longuíssimo tempo de casa (11–14 anos), mais velhos (42–50); muitos em afastamento de longa duração "
+         "(estabilidade de fato).",
+         "Sem o setor público, este é o PISO de risco do crédito privado (0,07–0,18%)."]),
+    "Risco Baixo": ("CLT qualificado e consolidado (financeiro, saúde, indústria)",
+        ["CLT por prazo indeterminado em setor financeiro, saúde, indústria de alimentos e educação privada; "
+         "5–6 anos de casa, ensino médio/superior.",
+         "No início do grupo (cat 3) entram temporários de agência e profissionais qualificados — é aqui que cai "
+         "o bancário típico.",
+         "Risco de 2–6%, bem abaixo da média."]),
+    "Risco Médio-Baixo": ("CLT do comércio e dos serviços de apoio",
+        ["Comércio (varejo/atacado) e serviços terceirizados (limpeza, apoio a empresas); empresas pequenas, "
+         "muitas no Simples; 2–4 anos de casa.",
+         "Trabalhadores mais jovens; rotatividade típica do comércio e dos serviços (8–14%)."]),
+    "Risco Médio": ("Alimentação, varejo e início da construção",
+        ["Bares/restaurantes e varejo; a partir daqui entram a produção industrial e a construção civil; "
+         "vínculos curtos (~1,5–2 anos).",
+         "Micro/pequenas empresas; escolaridade começando a cair (risco 16–30%)."]),
+    "Risco Alto": ("Operário da construção civil em micro construtora",
+        ["Construção de edifícios e obras de infraestrutura (CNAE 41/42, lift 4–6×); micro/pequenas construtoras; "
+         "ensino fundamental.",
+         "Quase 100% CLT 'indeterminado' — rotatividade ESTRUTURAL do setor: até 67% desligados no ano (cat 23)."]),
+}
+INDS_PRIV = [("CLT indet.", "clt_indet%"), ("Nível superior", "superior%"), ("Salário > 5 SM", "rem_alta%"),
+             ("Optante Simples", "simples%"), ("Micro/peq. empresa", "micro_peq%"), ("Ensino fundamental", "ate_fund%")]
+
+def apx_contexto():
+    fig = new_slide(); header(fig, "APÊNDICE · CONTEXTO", "Por que remover o setor público")
+    ntot = PERS["n"].sum(); npriv = PERS_PRIV["n"].sum(); rem = ntot - npriv
+    bullet(fig, 0.05, 0.74, [
+        (False, "Uso pretendido: consignado PRIVADO"),
+        (True, "O servidor público tem canal próprio de consignado — não é o público-alvo aqui."),
+        (True, f"Removendo o setor público saem {rem/1e6:.1f} mi de vínculos ({100*rem/ntot:.0f}% da base);"),
+        (True, f"restam {npriv/1e6:.1f} mi de trabalhadores do setor privado."),
+        (False, "O que muda nas personas"),
+        (True, "O setor público dominava as categorias de MENOR risco (estabilidade legal)."),
+        (True, "Sem ele, o piso de risco passa a ser o trabalhador privado mais estável —"),
+        (True, "veteranos de banco/grandes empresas — não mais o servidor concursado."),
+        (True, "Risco médio e alto (comércio, serviços, construção) quase não mudam."),
+    ], fs=12.6, dy=0.066)
+    ax = fig.add_axes([0.66, 0.14, 0.30, 0.58]); ax.axis("off"); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    ax.add_patch(FancyBboxPatch((0, 0), 1, 1, boxstyle="round,pad=0.02", facecolor=LIGHT, linewidth=0))
+    ax.text(0.5, 0.91, "Grupo Risco Mínimo (cat 1–2)", ha="center", fontsize=12, weight="bold", color=NAVY)
+    full_min = PERS[PERS.categoria.isin([1, 2])]["n"].sum()
+    priv_min = PERS_PRIV[PERS_PRIV.categoria.isin([1, 2])]["n"].sum()
+    rows = [("Base completa", f"{full_min/1e6:.1f} mi", "≈87% servidores públicos"),
+            ("Só setor privado", f"{priv_min/1e6:.1f} mi", "bancos/utilities · 14 anos de casa")]
+    for i, (k, v, s) in enumerate(rows):
+        y = 0.62 - i * 0.36
+        ax.text(0.07, y, k, fontsize=11.5, weight="bold", color=INK)
+        ax.text(0.07, y - 0.10, v, fontsize=19, weight="bold", color=GROUPS[0][2])
+        ax.text(0.07, y - 0.18, s, fontsize=9.3, color=GREY)
+    footer(fig, "A1"); pages.append(fig)
+
+divisor("Apêndice — Personas para consignado privado",
+        "Excluindo o setor público (servidores não são o público-alvo do consignado privado)", "A")
+apx_contexto()
+for i, (nome, cats, cor) in enumerate(GROUPS):
+    grupo_slide(nome, cats, cor, f"A{i + 2}", pers=PERS_PRIV, persona_txt=PERSONA_TXT_PRIV,
+                inds_spec=INDS_PRIV, base_lbl="do privado")
 
 # ======================= salvar =======================
 with PdfPages(PDF) as pdf:

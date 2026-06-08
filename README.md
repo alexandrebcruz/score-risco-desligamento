@@ -209,6 +209,9 @@ Perfila cada categoria: **composição interna** (buckets de vínculo/setor/remu
 **distintividade via lift** (share na categoria ÷ share global, piso de 5%) de
 CBO/CNAE/UF + médias das numéricas — via `pyarrow.group_by` (baixa memória), traduzido
 pelo dicionário RAIS. Saídas: `outputs/tables/persona_categorias.csv` e `outputs/PERSONAS.md`.
+O modo `python persona_categorias.py privado` **exclui o setor público** (`natureza_setor != '1'`)
+→ `persona_categorias_privado.csv`, base do **apêndice "consignado privado"** do deck (sem o
+servidor público, o piso de risco vira o veterano de banco/grande empresa privada).
 
 **5) Apresentação em PDF** *(quase-agnóstico)* — `gerar_apresentacao.py`
 Gera um deck **16:9** (`matplotlib.PdfPages`, sem dependências externas) em 3 partes:

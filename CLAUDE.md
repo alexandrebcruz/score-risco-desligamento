@@ -159,7 +159,11 @@ resumível; o pyarrow falha ao criar arquivo direto no mount `/mnt/d` → escrev
    Por categoria: composição interna (buckets) + distintividade via LIFT (share na
    categoria / share global, piso 5%) de CBO/CNAE/UF + médias numéricas, via
    `pyarrow.group_by`, traduzido pelo dicionário RAIS. Saídas:
-   `outputs/tables/persona_categorias.csv` + `outputs/PERSONAS.md`.
+   `outputs/tables/persona_categorias.csv` + `outputs/PERSONAS.md`. **Modo
+   `python persona_categorias.py privado`** filtra o setor público (`natureza_setor!='1'`)
+   → `persona_categorias_privado.csv` (público-alvo do **consignado privado**). No deck,
+   isso vira os slides de **Apêndice** (o piso de risco deixa de ser o servidor público
+   e passa a ser o veterano de banco/grande empresa privada).
 5. **Apresentação PDF** (`gerar_apresentacao.py`) — deck 16:9 via `matplotlib.PdfPages`
    (sem deps externas), 3 partes: (a) treino do ensemble base, (b) categorização (curva
    IG×K + tabela das 23), (c) personas (4 small-multiples do gradiente + 1 slide por
