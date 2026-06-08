@@ -336,12 +336,12 @@ Lições aprendidas (memória, transferência, custo) estão documentadas para n
 ├── add_categoria_risco_2023.py      # pós-modelo (3) materializa categoria_risco
 ├── persona_categorias.py            # pós-modelo (4) perfilagem/personas
 ├── gerar_apresentacao.py            # pós-modelo (5) gera o deck em PDF
-├── gerar_apresentacao_html.py       # deck em HTML (slides B1/B2 de sobrevivência interativos)
+├── gerar_apresentacao_html.py       # deck em HTML (slides sobrevivência B1/B2/B3 + desempenho interativos; 100% vetorial)
 ├── outputs/
 │   ├── RELATORIO_modelo_2023.md     # bug, correções e resultados ⭐
 │   ├── PERSONAS.md                  # personas das 23 categorias + método ⭐
 │   ├── apresentacao_risco_desligamento.pdf   # apresentação de slides ⭐
-│   ├── apresentacao_risco_desligamento.html  # mesmo deck em HTML (B1/B2 interativos)
+│   ├── apresentacao_risco_desligamento.html  # mesmo deck em HTML (4 slides interativos; 100% vetorial)
 │   ├── figures/ tables/             # figuras e tabelas (pequenas versionadas)
 │   └── runpod_ensemble_base/ ...    # métricas/importância/calibração dos modelos
 ├── tests/                   # pytest de sanidade do scoring

@@ -230,7 +230,7 @@ B2 = teoria Weibull + extrapolação; B3 = gráfico-caixa + tabela Q1/med/méd/Q
 roda o deck via `runpy` exportando 1 **SVG vetorial** por slide (env `DECK_DUMP_PNG` + `DECK_DUMP_FMT=svg`,
 `svg.fonttype=none`), embute cada slide como **SVG inline** (não PNG; texto em `<text>` **selecionável**,
 com a fonte **DejaVu embutida via `@font-face`** base64 — métricas idênticas às do matplotlib; ids
-prefixados por slide `sNN_` p/ não colidir entre os 25 SVGs) e troca os slides **B1/B2/B3** por
+prefixados por slide `sNN_` p/ não colidir entre os 24 SVGs estáticos) e troca os slides **B1/B2/B3** por
 gráficos SVG **interativos**: B1/B2 = curvas de sobrevivência (seleção por categoria/grupo, escala-Y
 dinâmica, tooltip); **B3 = gráfico-caixa** Q1/mediana/média/Q3 (caixa=IQR, hover na caixa OU na linha
 da tabela realça e mostra os dados num box). Reaproveita o motor de `sobrevivencia_interativa.html`.
