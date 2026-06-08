@@ -225,6 +225,16 @@ em `PERSONA_TXT_PRIV`). Lê `metrics_ensemble.json`, `importancia_ensemble.csv`,
 de `outputs/figures/` e as tabelas `binning_infogain_*`, `persona_categorias.csv` e
 `persona_categorias_privado.csv`.
 Saída: [`outputs/apresentacao_risco_desligamento.pdf`](outputs/apresentacao_risco_desligamento.pdf).
+O deck também tem o **Apêndice B** (tempo até o desligamento): teoria + curvas KM, extrapolação
+Weibull e o gráfico-caixa Q1/mediana/média/Q3 (ver §6.5).
+
+**Versão HTML interativa** — `gerar_apresentacao_html.py` converte o deck para um HTML
+autossuficiente/offline ([`outputs/apresentacao_risco_desligamento.html`](outputs/apresentacao_risco_desligamento.html)):
+roda o deck via `runpy` (exporta 1 PNG por slide com a env `DECK_DUMP_PNG`), embute os slides
+como PNG base64 e **substitui os 2 slides de sobrevivência (B1/B2) por gráficos SVG interativos**
+(seleção de curvas por categoria/grupo, escala-Y dinâmica, tooltip), reaproveitando o motor de
+`sobrevivencia_interativa.html`. Navegação por ←/→.
+
 > Outro modelo: regenere as etapas 1–4 (incl. `persona_categorias.py` **e**
 > `persona_categorias.py privado`) e **reescreva os textos narrativos das personas**
 > (`PERSONA_TXT` e `PERSONA_TXT_PRIV` no script) e os rótulos, pois são específicos dos
@@ -322,10 +332,12 @@ Lições aprendidas (memória, transferência, custo) estão documentadas para n
 ├── add_categoria_risco_2023.py      # pós-modelo (3) materializa categoria_risco
 ├── persona_categorias.py            # pós-modelo (4) perfilagem/personas
 ├── gerar_apresentacao.py            # pós-modelo (5) gera o deck em PDF
+├── gerar_apresentacao_html.py       # deck em HTML (slides B1/B2 de sobrevivência interativos)
 ├── outputs/
 │   ├── RELATORIO_modelo_2023.md     # bug, correções e resultados ⭐
 │   ├── PERSONAS.md                  # personas das 23 categorias + método ⭐
 │   ├── apresentacao_risco_desligamento.pdf   # apresentação de slides ⭐
+│   ├── apresentacao_risco_desligamento.html  # mesmo deck em HTML (B1/B2 interativos)
 │   ├── figures/ tables/             # figuras e tabelas (pequenas versionadas)
 │   └── runpod_ensemble_base/ ...    # métricas/importância/calibração dos modelos
 ├── tests/                   # pytest de sanidade do scoring
