@@ -160,6 +160,15 @@ resumível; o pyarrow falha ao criar arquivo direto no mount `/mnt/d` → escrev
    categoria / share global, piso 5%) de CBO/CNAE/UF + médias numéricas, via
    `pyarrow.group_by`, traduzido pelo dicionário RAIS. Saídas:
    `outputs/tables/persona_categorias.csv` + `outputs/PERSONAS.md`.
+5. **Apresentação PDF** (`gerar_apresentacao.py`) — deck 16:9 via `matplotlib.PdfPages`
+   (sem deps externas), 3 partes: (a) treino do ensemble base, (b) categorização (curva
+   IG×K + tabela das 23), (c) personas (4 small-multiples do gradiente + 1 slide por
+   grupo de risco Mínimo→Alto). Lê metrics/importância/calibração + tabelas
+   `binning_infogain_*`/`persona_categorias.csv` + figuras de `outputs/figures/`. Saída:
+   `outputs/apresentacao_risco_desligamento.pdf`. **Inspeção:** sem poppler, dumpar páginas
+   via `runpy.run_path(...)["pages"][i].savefig(png)` e ler o PNG. Outro modelo: refaça 1–4
+   e **REESCREVA os textos das personas** (dict `PERSONA_TXT`) e rótulos (são específicos
+   dos achados; números/gráficos se atualizam das tabelas). `MPLCONFIGDIR=/tmp/mpl`.
 
 ---
 

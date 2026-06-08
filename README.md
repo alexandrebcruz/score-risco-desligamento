@@ -210,6 +210,19 @@ Perfila cada categoria: **composição interna** (buckets de vínculo/setor/remu
 CBO/CNAE/UF + médias das numéricas — via `pyarrow.group_by` (baixa memória), traduzido
 pelo dicionário RAIS. Saídas: `outputs/tables/persona_categorias.csv` e `outputs/PERSONAS.md`.
 
+**5) Apresentação em PDF** *(quase-agnóstico)* — `gerar_apresentacao.py`
+Gera um deck **16:9** (`matplotlib.PdfPages`, sem dependências externas) em 3 partes:
+**(a) modelo** — como o ensemble base foi treinado (ensemble cross-temporal A/B, CatBoost,
+calibração e importância); **(b) categorização** — curva IG×K, K\*=23 e a tabela das 23
+categorias; **(c) personas** — 4 *small-multiples* do gradiente + 1 slide por grupo de
+risco (Mínimo → Alto). Lê `metrics_ensemble.json`, `importancia_ensemble.csv`, as figuras
+de `outputs/figures/` e as tabelas `binning_infogain_*` e `persona_categorias.csv`.
+Saída: [`outputs/apresentacao_risco_desligamento.pdf`](outputs/apresentacao_risco_desligamento.pdf).
+> Outro modelo: regenere as etapas 1–4 (tabelas/figuras) e **reescreva os textos
+> narrativos das personas** (dicionário `PERSONA_TXT` no script) e os rótulos, pois são
+> específicos dos achados deste modelo. Os números (métricas, tabela, gráficos) se
+> atualizam sozinhos a partir das tabelas.
+
 **O que as personas revelam:** o risco cresce de **servidor público estatutário** (menor
 risco) → CLT na indústria/saúde → comércio e serviços em pequenas empresas → **operário
 da construção civil em micro construtora** (maior risco: 66,7% desligados no ano). O
@@ -267,9 +280,11 @@ Lições aprendidas (memória, transferência, custo) estão documentadas para n
 ├── tune_bins_infogain.py            # pós-modelo (2) categorias por ganho de informação
 ├── add_categoria_risco_2023.py      # pós-modelo (3) materializa categoria_risco
 ├── persona_categorias.py            # pós-modelo (4) perfilagem/personas
+├── gerar_apresentacao.py            # pós-modelo (5) gera o deck em PDF
 ├── outputs/
 │   ├── RELATORIO_modelo_2023.md     # bug, correções e resultados ⭐
 │   ├── PERSONAS.md                  # personas das 23 categorias + método ⭐
+│   ├── apresentacao_risco_desligamento.pdf   # apresentação de slides ⭐
 │   ├── figures/ tables/             # figuras e tabelas (pequenas versionadas)
 │   └── runpod_ensemble_base/ ...    # métricas/importância/calibração dos modelos
 ├── tests/                   # pytest de sanidade do scoring
