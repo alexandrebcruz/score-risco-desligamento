@@ -130,7 +130,40 @@ python -u finish_aggs.py       # finaliza sequencialmente + merge
 
 ---
 
-## 6. Restrições de memória (aprendizados)
+## 6. Pipeline pós-modelo: predict → categorias → personas
+
+Fluxo aplicado ao melhor modelo (ensemble base) sobre 2023. **Etapas 2–4 são
+agnósticas ao modelo** — só dependem de um parquet de predições com `prob_desligamento`
++ `y` (+ features p/ personas). Para repetir com OUTRO modelo, refaça só a etapa 1.
+
+Roda LOCALMENTE (CPU). O sandbox mata processos longos (~10 min) → tudo em LOTES e
+resumível; o pyarrow falha ao criar arquivo direto no mount `/mnt/d` → escrever em
+`/tmp` e copiar. Precisa de `catboost`+`scikit-learn` no venv (`pip install`).
+
+1. **Predict** (`predict_ensemble_base_2023.py`) — model-específico.
+   Lê o interim 2023, aplica o MESMO pré-processamento do treino
+   (`cleaning.normalize_short_codes` + zfill/níveis), pontua em lotes de 3M linhas
+   (resumível) → `outputs/predicoes_2023_ensemble_base.parquet` (22 features + `y` +
+   `prob_A`/`prob_B`/`prob_desligamento`; AUC/LogLoss reproduzem o eval).
+   Outro modelo: trocar os `.cbm`/caminhos e GARANTIR pré-processamento == treino dele.
+2. **Categorias por ganho de informação** (`tune_bins_infogain.py [N_MICRO=1000] [K_MAX=40]`)
+   — agnóstico. Para cada K, acha por PROGRAMAÇÃO DINÂMICA os cortes de `prob_desligamento`
+   que MAXIMIZAM a informação mútua I(bin;y) (sobre ~1000 micro-bins por quantil). Varre K
+   e devolve o MAIOR K que maximiza o IG MANTENDO `y` médio estritamente crescente
+   (quebra em K+1) → **K\*=23** (IG 0,0663 bits = 11,7% de H(y)). Saídas:
+   `outputs/tables/binning_infogain_{sweep,escolhido}.csv` + figura.
+3. **Materializar categoria** (`add_categoria_risco_2023.py`) — agnóstico. Streama o
+   parquet, atribui `categoria_risco` 1..K via `searchsorted` nas bordas do
+   `binning_infogain_escolhido.csv` → `..._categorizado.parquet` (todas as colunas + a nova).
+4. **Personas** (`persona_categorias.py`) — agnóstico (precisa das features no parquet).
+   Por categoria: composição interna (buckets) + distintividade via LIFT (share na
+   categoria / share global, piso 5%) de CBO/CNAE/UF + médias numéricas, via
+   `pyarrow.group_by`, traduzido pelo dicionário RAIS. Saídas:
+   `outputs/tables/persona_categorias.csv` + `outputs/PERSONAS.md`.
+
+---
+
+## 7. Restrições de memória (aprendizados)
 - **RAM do container ~188 GB**: construir 2 Pools (132M+148M × 136 feat) estoura →
   use processos isolados + pools quantizados em disco (`quantized://`).
 - **VRAM do fit com 136 features ≈ 173 GB** → exige **B200 180GB** (H200 141GB = OOM).
@@ -141,7 +174,7 @@ python -u finish_aggs.py       # finaliza sequencialmente + merge
 
 ---
 
-## 7. Ambiente local
+## 8. Ambiente local
 - venv volátil (perde em reinício): recriar em `/tmp/consig_venv`
   `python3 -m venv --copies --without-pip /tmp/consig_venv` + bootstrap get-pip +
   `pip install pandas pyarrow numpy pyyaml` (e `catboost scikit-learn matplotlib` se precisar).
@@ -150,7 +183,7 @@ python -u finish_aggs.py       # finaliza sequencialmente + merge
 
 ---
 
-## 8. Convenções
+## 9. Convenções
 - Código real e comentado em PT-BR; `src/` concentra lógica, notebooks orquestram.
 - Confirmar com o usuário antes de subir pod paga. Usuário é consciente de custo.
 - Commits só quando pedido; mensagens terminam com a linha de co-autoria padrão.

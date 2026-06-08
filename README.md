@@ -28,11 +28,12 @@ Alvo padrão: `motivo_unificado == "involuntario_sjc"` (dispensa sem justa causa
 3. [Abordagem agregada (células, taxas, scoring, CAGED)](#3-abordagem-agregada)
 4. [Benchmark supervisionado: CatBoost → ensemble → lags](#4-benchmark-supervisionado)
 5. [A correção de normalização (o maior ganho do projeto)](#5-a-correção-de-normalização)
-6. [PGFN — histórico de dívidas das empresas](#6-pgfn--histórico-de-dívidas)
-7. [Infraestrutura RunPod](#7-infraestrutura-runpod)
-8. [Estrutura do repositório](#8-estrutura-do-repositório)
-9. [Como rodar](#9-como-rodar)
-10. [Limitações, LGPD e ética](#10-limitações-lgpd-e-ética)
+6. [Da probabilidade às personas (predict → categorias → personas)](#6-da-probabilidade-às-personas)
+7. [PGFN — histórico de dívidas das empresas](#7-pgfn--histórico-de-dívidas)
+8. [Infraestrutura RunPod](#8-infraestrutura-runpod)
+9. [Estrutura do repositório](#9-estrutura-do-repositório)
+10. [Como rodar](#10-como-rodar)
+11. [Limitações, LGPD e ética](#11-limitações-lgpd-e-ética)
 
 ---
 
@@ -171,7 +172,52 @@ mesmo significado ao longo dos anos.)
 
 ---
 
-## 6. PGFN — histórico de dívidas
+## 6. Da probabilidade às personas
+
+Pipeline **pós-modelo** que transforma o score contínuo em **categorias de risco
+interpretáveis** e **personas**. As etapas 2–4 são **agnósticas ao modelo** (só dependem
+de um parquet de predições com `prob_desligamento` + `y` + as features) — para repetir
+com **outro modelo**, refaça apenas a etapa 1. Tudo roda localmente (CPU), em **lotes e
+resumível** (o sandbox mata processos longos; o pyarrow falha ao criar arquivo direto no
+mount `/mnt/d` → escrever em `/tmp` e copiar). Personas completas em
+[`outputs/PERSONAS.md`](outputs/PERSONAS.md).
+
+**1) Predict — pontuar toda a base** *(model-específico)* — `predict_ensemble_base_2023.py`
+Aplica o melhor modelo (ensemble base = média de `catboost_A` + `catboost_B`) a todo o
+holdout 2023, com o **mesmo pré-processamento do treino** (`normalize_short_codes` +
+`zfill`/níveis hierárquicos). Saída: `outputs/predicoes_2023_ensemble_base.parquet`
+(22 features + `y` + `prob_A`/`prob_B`/`prob_desligamento`). O AUC/LogLoss reproduzem
+exatamente o eval (0,741 / 0,348).
+> Outro modelo: troque os `.cbm`/caminhos e **garanta que o pré-processamento bate com o
+> treino daquele modelo** (mesmas features, mesma normalização).
+
+**2) Categorização por ganho de informação** *(agnóstico)* — `tune_bins_infogain.py`
+Discretização **supervisionada** de `prob_desligamento`: para cada nº de categorias K,
+acha por **programação dinâmica** os cortes que **maximizam a informação mútua**
+`I(categoria; y) = H(y) − H(y|categorias)` (em bits), sobre ~1000 micro-bins por quantil.
+Varre K crescente e retorna o **maior K que maximiza o ganho de informação MANTENDO o
+`y` médio estritamente crescente** entre categorias (a ordenação quebra em K+1).
+→ **K\* = 23 categorias** (IG 0,0663 bits = 11,7% de H(y); lift 0,05× a 5,0×).
+Saídas: `outputs/tables/binning_infogain_{sweep,escolhido}.csv` e `outputs/figures/binning_infogain.png`.
+
+**3) Materializar a categoria** *(agnóstico)* — `add_categoria_risco_2023.py`
+Streama o parquet e atribui `categoria_risco` (1..K) por `searchsorted` nas bordas →
+`outputs/predicoes_2023_ensemble_base_categorizado.parquet` (todas as colunas + a nova).
+
+**4) Personas** *(agnóstico)* — `persona_categorias.py`
+Perfila cada categoria: **composição interna** (buckets de vínculo/setor/remuneração) +
+**distintividade via lift** (share na categoria ÷ share global, piso de 5%) de
+CBO/CNAE/UF + médias das numéricas — via `pyarrow.group_by` (baixa memória), traduzido
+pelo dicionário RAIS. Saídas: `outputs/tables/persona_categorias.csv` e `outputs/PERSONAS.md`.
+
+**O que as personas revelam:** o risco cresce de **servidor público estatutário** (menor
+risco) → CLT na indústria/saúde → comércio e serviços em pequenas empresas → **operário
+da construção civil em micro construtora** (maior risco: 66,7% desligados no ano). O
+modelo capta a **rotatividade estrutural da construção mesmo em CLT indeterminado**.
+
+---
+
+## 7. PGFN — histórico de dívidas
 
 Módulo `src/pgfn.py` + nb `08_pgfn_lista_empresas`: baixa os **Dados Abertos da Dívida
 Ativa da União** (trimestral, 2020→atual), filtra **dívidas previdenciárias e de FGTS** e
@@ -182,7 +228,7 @@ devedores é pesado e fica fora do versionamento).
 
 ---
 
-## 7. Infraestrutura RunPod
+## 8. Infraestrutura RunPod
 
 Treinos pesados e recálculo de agregações rodam em **pods GPU/CPU sob demanda**, criadas
 via **HubService** (API `http://hub:8788`) e acessadas por SSH (`runpod/remote.py`).
@@ -203,7 +249,7 @@ Lições aprendidas (memória, transferência, custo) estão documentadas para n
 
 ---
 
-## 8. Estrutura do repositório
+## 9. Estrutura do repositório
 
 ```
 .
@@ -217,8 +263,13 @@ Lições aprendidas (memória, transferência, custo) estão documentadas para n
 │   └── pgfn.py              #   dívida ativa (PGFN)
 ├── notebooks/00..08         # pipeline ponta a ponta
 ├── runpod/                  # execução no RunPod (ver runpod/README.md)
+├── predict_ensemble_base_2023.py    # pós-modelo (1) predict do holdout 2023
+├── tune_bins_infogain.py            # pós-modelo (2) categorias por ganho de informação
+├── add_categoria_risco_2023.py      # pós-modelo (3) materializa categoria_risco
+├── persona_categorias.py            # pós-modelo (4) perfilagem/personas
 ├── outputs/
 │   ├── RELATORIO_modelo_2023.md     # bug, correções e resultados ⭐
+│   ├── PERSONAS.md                  # personas das 23 categorias + método ⭐
 │   ├── figures/ tables/             # figuras e tabelas (pequenas versionadas)
 │   └── runpod_ensemble_base/ ...    # métricas/importância/calibração dos modelos
 ├── tests/                   # pytest de sanidade do scoring
@@ -228,7 +279,7 @@ Lições aprendidas (memória, transferência, custo) estão documentadas para n
 
 ---
 
-## 9. Como rodar
+## 10. Como rodar
 
 ```bash
 pip install -r requirements.txt        # + py7zr p/ extrair os .7z da RAIS
@@ -241,13 +292,13 @@ jupyter lab                            # execute notebooks 00 -> 08 em ordem
 pytest -q
 ```
 
-Treinos pesados (ensemble/CatBoost full-data): ver seção [7](#7-infraestrutura-runpod) e
+Treinos pesados (ensemble/CatBoost full-data): ver seção [8](#8-infraestrutura-runpod) e
 [`CLAUDE.md`](CLAUDE.md). Ambiente local: o sandbox mata processos longos (~10 min) e o
 venv é volátil — para treinos use RunPod.
 
 ---
 
-## 10. Limitações, LGPD e ética
+## 11. Limitações, LGPD e ética
 
 **Limitações da abordagem agregada**
 - **Falácia ecológica / viés de composição:** a taxa da célula ≠ risco do indivíduo;
