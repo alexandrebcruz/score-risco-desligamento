@@ -236,8 +236,9 @@ dinâmica, tooltip); **B3 = gráfico-caixa** Q1/mediana/média/Q3 (caixa=IQR, ho
 da tabela realça e mostra os dados num box). Reaproveita o motor de `sobrevivencia_interativa.html`.
 Fontes/controles em `--u` (1% da largura do palco) p/ escalar com o slide; navegação fixa ao canto com
 `100dvh` (não some no tablet em paisagem). Autossuficiente/offline; navegação por ←/→.
-Índices B1/B2/B3 = `NP-3`/`NP-2`/`NP-1`. **Obs:** só o slide de desempenho (calibração+importância)
-ainda tem 2 figuras raster embutidas via `imshow` (vêm de PNG pré-render por outros scripts).
+O **slide 5 (desempenho)** também é nativo/interativo: calibração em SVG + **importância clicável**
+(clique numa variável → explicação + exemplos de valores do dicionário `FEATINFO`, com de-paras
+da RAIS). Índices: desempenho=`4`, B1/B2/B3=`NP-3`/`NP-2`/`NP-1`. **Deck 100% vetorial (0 PNG raster).**
 
 Aprendizados (não reintroduzir):
 - **Sazonalidade de dezembro** no hazard (spike ×1,3–4,3) + **rampa nos meses 1–3**; o Weibull

@@ -29,7 +29,8 @@ print("renderizando slides via gerar_apresentacao.py ...")
 ns = runpy.run_path("gerar_apresentacao.py")
 NP = len(ns["pages"])
 B1, B2, B3 = NP - 3, NP - 2, NP - 1   # slides interativos: surv_curva, surv_weibull, surv_estatisticas
-print(f"{NP} slides; interativos: B1={B1}, B2={B2}, B3={B3}")
+DESEMP = 4                            # slide de desempenho (calibração + importância) — 5º slide
+print(f"{NP} slides; interativos: desempenho={DESEMP}, B1={B1}, B2={B2}, B3={B3}")
 
 def inline_svg(path, pfx):
     """Insere o SVG do matplotlib inline, escalado p/ preencher o slide. Prefixa todos os
@@ -77,6 +78,82 @@ GROUPS = [("Mínimo", [1, 2], "#1a9850"), ("Baixo", [3, 4, 5, 6], "#86cb66"),
           ("Médio", [12, 13, 14, 15, 16, 17], "#fb8d3d"),
           ("Alto", [18, 19, 20, 21, 22, 23], "#d73027")]
 GROUPS_JSON = json.dumps([{"nome": n, "cats": c, "cor": col} for n, c, col in GROUPS], ensure_ascii=False)
+
+# ---------- dados do slide 5 (desempenho): calibração + importância + dicionário de features ----------
+_cal = pd.read_csv("outputs/runpod_ensemble_base/calibracao_ensemble.csv")
+CALIB_JSON = json.dumps([{"p": round(float(r.prevista), 5), "o": round(float(r.observada), 5)}
+                         for r in _cal.itertuples()], ensure_ascii=False)
+_imp = pd.read_csv("outputs/runpod_ensemble_base/importancia_ensemble.csv").sort_values("imp_ensemble", ascending=False)
+IMP_JSON = json.dumps([{"f": r.feature, "imp": round(float(r.imp_ensemble), 2)} for r in _imp.itertuples()], ensure_ascii=False)
+
+# explicação de cada variável + exemplos de valores (códigos traduzidos pelo de-para da RAIS)
+FEATINFO = {
+ "tempo_vinculo_meses": {"curto": "Tempo de vínculo", "nome": "Tempo de vínculo (meses)",
+   "desc": "Há quantos meses a pessoa está no emprego atual. Variável mais importante — vínculos novos têm risco muito maior.",
+   "ex": ["Numérico, em meses", "Ex.: 3, 12, 60, 120"]},
+ "tipo_vinculo": {"curto": "Tipo de vínculo", "nome": "Tipo de vínculo",
+   "desc": "Natureza jurídica do contrato de trabalho (RAIS).",
+   "ex": ["10/15/20/25 = CLT prazo indeterminado", "30/31/35 = estatutário (servidor)",
+          "50/55/60/65 = temporário / prazo determinado", "97 = contrato Verde e Amarelo"]},
+ "faixa_remuneracao": {"curto": "Remuneração", "nome": "Faixa de remuneração (salários mínimos)",
+   "desc": "Faixa do salário, em salários mínimos.",
+   "ex": ["0–2 = até 1 SM", "3–7 = de 1 a 5 SM", "8–12 = acima de 5 SM"]},
+ "tamanho_estab": {"curto": "Tamanho estab.", "nome": "Tamanho do estabelecimento",
+   "desc": "Faixa de número de vínculos do estabelecimento (porte do empregador).",
+   "ex": ["1 = zero / 2 = de 1 a 4", "5 = de 50 a 99", "10 = 1000 ou mais"]},
+ "natureza_juridica": {"curto": "Nat. jurídica", "nome": "Natureza jurídica do empregador",
+   "desc": "Tipo jurídico da empresa/órgão (tabela da Receita Federal).",
+   "ex": ["2062 = Sociedade Empresária Ltda.", "2135 = Empresário individual (MEI)",
+          "1023 = Órgão público municipal", "3999 = Associação privada"]},
+ "uf": {"curto": "UF", "nome": "UF (Unidade da Federação)",
+   "desc": "Estado onde está o vínculo.",
+   "ex": ["SP, MG, RJ, BA, RS…", "(ou código IBGE: 35=SP, 31=MG, 33=RJ)"]},
+ "qtd_dias_afastamento": {"curto": "Dias afast.", "nome": "Dias de afastamento",
+   "desc": "Quantidade de dias afastado no ano.", "ex": ["Numérico, em dias", "Ex.: 0, 15, 120"]},
+ "natureza_setor": {"curto": "Nat. setor", "nome": "Natureza do setor",
+   "desc": "Distingue setor público de privado.", "ex": ["1 = setor público", "2/3/4 = setor privado / outros"]},
+ "cnae2": {"curto": "CNAE-2", "nome": "CNAE — divisão (2 dígitos)",
+   "desc": "Atividade econômica do empregador, no nível de divisão.",
+   "ex": ["41 = Construção de edifícios", "47 = Comércio varejista",
+          "84 = Administração pública", "86 = Saúde humana"]},
+ "cbo1": {"curto": "CBO-1", "nome": "CBO — grande grupo (1 dígito)",
+   "desc": "Ocupação da pessoa, no nível mais agregado.",
+   "ex": ["3 = técnicos de nível médio", "5 = serviços e vendas",
+          "7 = produção de bens (indústria)", "9 = manutenção e reparação"]},
+ "cbo2": {"curto": "CBO-2", "nome": "CBO — subgrupo principal (2 dígitos)",
+   "desc": "Ocupação no nível de subgrupo.",
+   "ex": ["51 = serviços / 52 = vendas no comércio", "71 = construção civil e extração", "78 = condutores e operadores"]},
+ "faixa_horas": {"curto": "Horas", "nome": "Faixa de horas contratadas",
+   "desc": "Faixa de jornada semanal contratada.", "ex": ["41–44h = jornada integral", "≈ 20–30h = parcial"]},
+ "cbo4": {"curto": "CBO-4", "nome": "CBO — família ocupacional (4 dígitos)",
+   "desc": "Ocupação no nível de família.",
+   "ex": ["7152 = pedreiros", "5173 = vigias/porteiros", "4110 = auxiliares de escritório"]},
+ "cbo": {"curto": "CBO-6", "nome": "CBO — ocupação (6 dígitos)",
+   "desc": "Código completo da ocupação.",
+   "ex": ["715210 = Pedreiro", "517330 = Porteiro", "521110 = Vendedor de comércio varejista"]},
+ "cnae3": {"curto": "CNAE-3", "nome": "CNAE — grupo (3 dígitos)",
+   "desc": "Atividade econômica no nível de grupo.",
+   "ex": ["412 = Construção de edifícios", "471 = Comércio varejista não especializado"]},
+ "cnae": {"curto": "CNAE-6", "nome": "CNAE — classe/subclasse (completo)",
+   "desc": "Código completo da atividade econômica.",
+   "ex": ["4120400 = Construção de edifícios", "4711301 = Hipermercados"]},
+ "idade": {"curto": "Idade", "nome": "Idade (anos)", "desc": "Idade da pessoa.",
+   "ex": ["Numérico, em anos", "Ex.: 18, 30, 45, 60"]},
+ "cnae5": {"curto": "CNAE-5", "nome": "CNAE — classe (5 dígitos)",
+   "desc": "Atividade econômica no nível de classe.",
+   "ex": ["41204 = Construção de edifícios", "47113 = Comércio varejista de mercadorias"]},
+ "causa_afastamento": {"curto": "Causa afast.", "nome": "Causa de afastamento",
+   "desc": "Motivo do afastamento registrado no ano.",
+   "ex": ["99 = sem afastamento (≈84% dos casos)", "01 = acidente de trabalho", "03 = doença", "+ licenças diversas"]},
+ "escolaridade": {"curto": "Escolaridade", "nome": "Escolaridade (grau de instrução)",
+   "desc": "Grau de instrução da pessoa (RAIS, grau_instrucao 1–11).",
+   "ex": ["1–4 = até fundamental incompleto", "8 = médio completo", "9 = superior incompleto", "11 = superior completo"]},
+ "simples": {"curto": "Simples", "nome": "Optante pelo Simples Nacional",
+   "desc": "Se o empregador é optante do Simples Nacional.", "ex": ["1 = sim (optante)", "0 = não"]},
+ "intermitente": {"curto": "Intermitente", "nome": "Contrato intermitente",
+   "desc": "Se o vínculo é de trabalho intermitente.", "ex": ["1 = sim", "0 = não"]},
+}
+FEATINFO_JSON = json.dumps(FEATINFO, ensure_ascii=False)
 
 # fonte DejaVu embutida (texto fica SELECIONÁVEL e com métricas idênticas às do matplotlib)
 _TTF = os.path.join(matplotlib.get_data_path(), "fonts", "ttf")
@@ -140,6 +217,15 @@ def box_slide():
   <div class="boxhint">Passe o mouse numa categoria (caixa ou linha) para ver os dados</div>
 </div>'''
 
+def desempenho_slide():
+    return '''<div class="slide cust">
+  <div class="hb"><span class="kick">DESENVOLVIMENTO · RESULTADO</span><span class="ttl">Desempenho: discrimina bem e é bem calibrado</span></div>
+  <div class="calibwrap"><svg id="svg-calib" viewBox="0 0 380 340" preserveAspectRatio="xMidYMid meet"></svg>
+    <div class="capt">Calibração: risco previsto ≈ observado nos decis (erro &lt; 1 p.p.).</div></div>
+  <div class="featinfo" id="featinfo"><div class="fi-h">Importância das variáveis</div><div class="fi-d">Clique numa barra ao lado para ver o que é a variável e exemplos de valores.</div></div>
+  <div class="impwrap"><svg id="svg-imp" viewBox="0 0 560 470" preserveAspectRatio="xMidYMid meet"></svg></div>
+</div>'''
+
 # ---------- 4. monta todos os slides ----------
 slides = []
 for i in range(NP):
@@ -151,6 +237,8 @@ for i in range(NP):
                       "Estendendo as curvas além de 12 meses (Weibull)", B2_TXT, "weib"))
     elif i == B3:
         slides.append(box_slide())
+    elif i == DESEMP:
+        slides.append(desempenho_slide())
     else:
         slides.append(f'<div class="slide">{inline_svg(f"{DUMP}/slide_{i:02d}.svg", f"s{i:02d}_")}</div>')
 SLIDES = "\n".join(slides)
@@ -208,6 +296,18 @@ HTML = r"""<!DOCTYPE html>
   .boxtable tr.hl td{background:#fff3cf;}
   .boxtable tr.hl td.ct{filter:brightness(.85);}
   .boxhint{position:absolute;left:2%;bottom:2.5%;color:var(--grey);font-size:calc(var(--u)*0.9);}
+  /* slide 5: desempenho (calibração SVG + importância interativa) */
+  .calibwrap{position:absolute;left:2.5%;top:15.5%;width:35%;height:44%;}
+  .calibwrap svg{width:100%;height:84%;}
+  .capt{font-size:calc(var(--u)*0.82);color:var(--grey);margin-top:.3em;}
+  .featinfo{position:absolute;left:2.5%;top:61%;width:35%;height:35%;overflow:auto;background:#f4f7fb;border:1px solid #e3e9f1;border-radius:8px;padding:calc(var(--u)*0.7);}
+  .featinfo .fi-h{font-weight:700;font-size:calc(var(--u)*1.05);color:var(--navy);margin-bottom:.3em;}
+  .featinfo .fi-d{font-size:calc(var(--u)*0.92);color:var(--ink);line-height:1.4;}
+  .featinfo .fi-ex{margin-top:.5em;font-size:calc(var(--u)*0.9);}
+  .featinfo .fi-ex li{margin:.15em 0;color:#33404f;}
+  .impwrap{position:absolute;left:40.5%;top:14.5%;width:58%;height:83%;}
+  .impwrap svg{width:100%;height:100%;}
+  .imp-bar{cursor:pointer;}
   .grid{stroke:#e6e6e6;stroke-width:1;} .ax{stroke:#999;stroke-width:1;} .tk{fill:#666;font-size:11px;} .al{fill:#1b2430;font-size:12px;}
   .cv{fill:none;stroke-width:1.7;} .ext{fill:none;stroke-width:1.4;stroke-dasharray:5 4;} .dt{stroke:#fff;stroke-width:.5;}
   .bound{stroke:#999;stroke-width:1;stroke-dasharray:2 3;} .guide{stroke:#888;stroke-dasharray:4 3;stroke-width:1;visibility:hidden;}
@@ -233,6 +333,7 @@ __SLIDES__
 <div id="tip"></div>
 <script>
 const DATA=__DATA__, GROUPS=__GROUPS__;
+const CALIB=__CALIB__, IMP=__IMP__, FEATINFO=__FEATINFO__;
 /* ---------- navegação do deck ---------- */
 const slides=[...document.querySelectorAll('.slide')]; let cur=0;
 const counter=document.getElementById('counter');
@@ -345,7 +446,7 @@ function makeBoxChart(){
   });
   // tabela
   const tb=document.getElementById('boxtable');
-  let html='<table><thead><tr><th>cat</th><th>Q1</th><th>med</th><th>méd</th><th>Q3</th></tr></thead><tbody>';
+  let html='<table><thead><tr><th>cat</th><th>Q1</th><th>mediana</th><th>média</th><th>Q3</th></tr></thead><tbody>';
   DATA.forEach(s=>{ html+='<tr data-k="'+s.k+'"><td class="ct" style="background:'+s.cor+';color:'+s.txt+'">'+s.k+'</td><td>'+fmt(s.q1)+'</td><td>'+fmt(s.medm)+'</td><td>'+fmt(s.media)+'</td><td>'+fmt(s.q3)+'</td></tr>'; });
   tb.innerHTML=html+'</tbody></table>';
   tb.querySelectorAll('tr[data-k]').forEach(r=>{ const k=+r.dataset.k;
@@ -369,13 +470,65 @@ function makeBoxChart(){
   }
 }
 makeBoxChart();
+
+/* ---------- slide 5: calibração (SVG) ---------- */
+function makeCalib(){
+  const svg=document.getElementById('svg-calib'); if(!svg) return;
+  const NS='http://www.w3.org/2000/svg', W=380,HT=340,M={l:46,r:12,t:10,b:32},PW=W-M.l-M.r,PH=HT-M.t-M.b;
+  let mx=0; CALIB.forEach(d=>{ mx=Math.max(mx,d.p,d.o); }); const top=Math.ceil(mx*10)/10||0.1;
+  function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+  const xP=v=>M.l+v/top*PW, yP=v=>M.t+(1-v/top)*PH;
+  [0,top/2,top].forEach(v=>{ const y=yP(v),x=xP(v);
+    svg.appendChild(el('line',{x1:M.l,y1:y,x2:W-M.r,y2:y,stroke:'#eee'}));
+    const ty=el('text',{x:M.l-4,y:y+3,'text-anchor':'end','font-size':8.5,fill:'#666'}); ty.textContent=(v*100).toFixed(0)+'%'; svg.appendChild(ty);
+    const tx=el('text',{x:x,y:M.t+PH+11,'text-anchor':'middle','font-size':8.5,fill:'#666'}); tx.textContent=(v*100).toFixed(0)+'%'; svg.appendChild(tx); });
+  svg.appendChild(el('line',{x1:xP(0),y1:yP(0),x2:xP(top),y2:yP(top),stroke:'#bbb','stroke-dasharray':'4 3'}));   // diagonal ideal
+  svg.appendChild(el('line',{x1:M.l,y1:M.t,x2:M.l,y2:M.t+PH,stroke:'#999'}));
+  svg.appendChild(el('line',{x1:M.l,y1:M.t+PH,x2:W-M.r,y2:M.t+PH,stroke:'#999'}));
+  let dd=''; CALIB.forEach((d,i)=>{ dd+=(i?' L ':'M ')+xP(d.p)+' '+yP(d.o); });
+  svg.appendChild(el('path',{d:dd,fill:'none',stroke:'#2c5f9e','stroke-width':1.6}));
+  CALIB.forEach(d=>svg.appendChild(el('circle',{cx:xP(d.p),cy:yP(d.o),r:3,fill:'#2c5f9e',stroke:'#fff','stroke-width':0.6})));
+  const xl=el('text',{x:M.l+PW/2,y:HT-2,'text-anchor':'middle','font-size':9,fill:'#1b2430'}); xl.textContent='risco previsto'; svg.appendChild(xl);
+  const yl=el('text',{'text-anchor':'middle','font-size':9,fill:'#1b2430',transform:'translate(11,'+(M.t+PH/2)+') rotate(-90)'}); yl.textContent='risco observado'; svg.appendChild(yl);
+}
+makeCalib();
+
+/* ---------- slide 5: importância das variáveis (SVG, clicável) ---------- */
+function makeImp(){
+  const svg=document.getElementById('svg-imp'); if(!svg) return;
+  const NS='http://www.w3.org/2000/svg', W=560,HT=470,M={l:96,r:44,t:8,b:10},PW=W-M.l-M.r,PH=HT-M.t-M.b;
+  const n=IMP.length, maxImp=IMP[0].imp, barH=PH/n, bars={}; let sel=null;
+  function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+  function selFeat(f){
+    if(sel&&bars[sel]) bars[sel].querySelector('.ib').setAttribute('fill','#3b7dba');
+    sel=f; if(bars[f]) bars[f].querySelector('.ib').setAttribute('fill','#14233f');
+    const info=FEATINFO[f]||{}, box=document.getElementById('featinfo');
+    const ex=(info.ex||[]).map(e=>'<li>'+e+'</li>').join('');
+    box.innerHTML='<div class="fi-h">'+(info.nome||f)+'</div><div class="fi-d">'+(info.desc||'')+'</div>'+(ex?'<ul class="fi-ex">'+ex+'</ul>':'');
+  }
+  IMP.forEach((d,i)=>{ const y=M.t+i*barH, h=barH*0.74, len=d.imp/maxImp*PW, lab=(FEATINFO[d.f]||{}).curto||d.f;
+    const g=el('g',{class:'imp-bar','data-f':d.f});
+    g.appendChild(el('rect',{x:M.l,y:y,width:Math.max(len,0.5),height:h,fill:'#3b7dba',rx:2,class:'ib'}));
+    const tl=el('text',{x:M.l-5,y:y+h/2+3,'text-anchor':'end','font-size':9.5,fill:'#1b2430'}); tl.textContent=lab; svg.appendChild(tl);
+    const tv=el('text',{x:M.l+len+4,y:y+h/2+3,'font-size':9,fill:'#5b6675'}); tv.textContent=d.imp.toFixed(1)+'%'; svg.appendChild(tv);
+    g.appendChild(el('rect',{x:M.l,y:y,width:PW,height:h,fill:'transparent'}));
+    g.addEventListener('click',()=>selFeat(d.f));
+    g.addEventListener('mouseenter',()=>{ if(sel!==d.f) g.querySelector('.ib').setAttribute('fill','#2c5f9e'); });
+    g.addEventListener('mouseleave',()=>{ if(sel!==d.f) g.querySelector('.ib').setAttribute('fill','#3b7dba'); });
+    bars[d.f]=g; svg.appendChild(g); });
+  selFeat(IMP[0].f);
+}
+makeImp();
 </script>
 </body></html>"""
 
 HTML = (HTML.replace("__FONTS__", FONTS)
             .replace("__SLIDES__", SLIDES)
             .replace("__DATA__", DATA)
-            .replace("__GROUPS__", GROUPS_JSON))
+            .replace("__GROUPS__", GROUPS_JSON)
+            .replace("__CALIB__", CALIB_JSON)
+            .replace("__IMP__", IMP_JSON)
+            .replace("__FEATINFO__", FEATINFO_JSON))
 with open(TMP, "w", encoding="utf-8") as f:
     f.write(HTML)
 shutil.copy(TMP, OUT)

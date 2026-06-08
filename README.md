@@ -234,7 +234,10 @@ roda o deck via `runpy` (exporta cada slide como **SVG vetorial** — `DECK_DUMP
 os slides como **SVG inline** (não imagens raster: texto **selecionável** com fonte DejaVu embutida, dimensões idênticas ao PDF)
 e **substitui os 3 slides do apêndice de sobrevivência (B1/B2/B3) por gráficos SVG interativos**:
 B1/B2 = curvas (seleção por categoria/grupo, escala-Y dinâmica, tooltip); B3 = gráfico-caixa
-Q1/mediana/média/Q3 (hover na caixa/linha mostra os dados num box). Navegação por ←/→.
+Q1/mediana/média/Q3 (hover na caixa/linha mostra os dados num box). O **slide 5** (desempenho)
+também é interativo: calibração em SVG + importância das variáveis **clicável** (clique numa
+variável → explicação e exemplos de valores). Deck **100% vetorial** (sem imagens raster).
+Navegação por ←/→.
 
 > Outro modelo: regenere as etapas 1–4 (incl. `persona_categorias.py` **e**
 > `persona_categorias.py privado`) e **reescreva os textos narrativos das personas**
