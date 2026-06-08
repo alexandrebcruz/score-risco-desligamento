@@ -228,8 +228,9 @@ B2 = teoria Weibull + extrapolação; B3 = gráfico-caixa + tabela Q1/med/méd/Q
 
 **Deck em HTML** (`gerar_apresentacao_html.py` → `outputs/apresentacao_risco_desligamento.html`):
 roda o deck via `runpy` exportando 1 **SVG vetorial** por slide (env `DECK_DUMP_PNG` + `DECK_DUMP_FMT=svg`,
-`svg.fonttype=path`), embute cada slide como **SVG inline** (não PNG; texto/gráficos nítidos, dimensões
-idênticas — ids prefixados por slide `sNN_` p/ não colidir entre os 26 SVGs) e troca os slides B1/B2 por
+`svg.fonttype=none`), embute cada slide como **SVG inline** (não PNG; texto em `<text>` **selecionável**,
+com a fonte **DejaVu embutida via `@font-face`** base64 — métricas idênticas às do matplotlib; ids
+prefixados por slide `sNN_` p/ não colidir entre os 26 SVGs) e troca os slides B1/B2 por
 gráficos SVG **interativos** (seleção de curvas por categoria/grupo, escala-Y dinâmica, tooltip),
 reaproveitando o motor de `sobrevivencia_interativa.html`. Fontes/controles em `--u` (1% da largura do
 palco) p/ escalar com o slide; navegação fixa ao canto com `100dvh` (não some no tablet em paisagem).

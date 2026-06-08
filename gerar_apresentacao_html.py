@@ -12,9 +12,10 @@ Saída: outputs/apresentacao_risco_desligamento.html
 import os, runpy, json, shutil, re
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/mpl")
 import pandas as pd
+import base64
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-plt.rcParams["svg.fonttype"] = "path"   # glyphs como vetor -> layout idêntico, sem depender de fontes do sistema
+plt.rcParams["svg.fonttype"] = "none"   # texto como <text> (SELECIONÁVEL); fonte embutida via @font-face
 from matplotlib import cm, colors
 
 DUMP = "/tmp/apresentacao_svg"
@@ -71,6 +72,14 @@ GROUPS = [("Mínimo", [1, 2], "#1a9850"), ("Baixo", [3, 4, 5, 6], "#86cb66"),
           ("Médio", [12, 13, 14, 15, 16, 17], "#fb8d3d"),
           ("Alto", [18, 19, 20, 21, 22, 23], "#d73027")]
 GROUPS_JSON = json.dumps([{"nome": n, "cats": c, "cor": col} for n, c, col in GROUPS], ensure_ascii=False)
+
+# fonte DejaVu embutida (texto fica SELECIONÁVEL e com métricas idênticas às do matplotlib)
+_TTF = os.path.join(matplotlib.get_data_path(), "fonts", "ttf")
+def _face(fname, weight):
+    b = base64.b64encode(open(os.path.join(_TTF, fname), "rb").read()).decode()
+    return ("@font-face{font-family:'DejaVu Sans';font-style:normal;font-weight:%s;"
+            "src:url(data:font/ttf;base64,%s) format('truetype');}" % (weight, b))
+FONTS = _face("DejaVuSans.ttf", "400") + _face("DejaVuSans-Bold.ttf", "700")
 
 # ---------- 3. slides interativos (header + bullets + área do gráfico) ----------
 NAVY = "#14233f"
@@ -136,6 +145,7 @@ HTML = r"""<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="utf-8">
 <title>Risco de Desligamento — apresentação</title>
 <style>
+  __FONTS__
   :root{ --navy:#14233f; --ink:#1b2430; --grey:#5b6675; }
   *{box-sizing:border-box;} html,body{margin:0;height:100%;background:#0d1626;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
   .deck{height:100vh;height:100dvh;display:flex;align-items:center;justify-content:center;}
@@ -268,7 +278,8 @@ makeChart('svg-weib','chips-weib','grp-weib',true,36);
 </script>
 </body></html>"""
 
-HTML = (HTML.replace("__SLIDES__", SLIDES)
+HTML = (HTML.replace("__FONTS__", FONTS)
+            .replace("__SLIDES__", SLIDES)
             .replace("__DATA__", DATA)
             .replace("__GROUPS__", GROUPS_JSON))
 with open(TMP, "w", encoding="utf-8") as f:
