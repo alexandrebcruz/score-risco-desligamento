@@ -62,6 +62,33 @@ Ver `outputs/tables/metricas_2023_consolidado.csv`.
 > 2021‑22 (val 2019‑20); ensemble = média das probabilidades. Métrica de treino e de
 > early stopping = **Logloss**. Holdout = 2023 (nunca visto no fit/early stopping).
 
+### 🔵 Variante +lags com early stopping ~1000 iter (árvores rasas)
+
+Experimento dedicado a investigar se o early stopping precoce (iter 70/95) da variante
++lags era a causa do baixo desempenho. Objetivo: forçar o early stopping dos dois modelos
+do ensemble para **≥ 1000 iterações**, ajustando `depth` e `learning_rate` **dentro das
+faixas recomendadas do CatBoost** (`lr` ∈ [0,01; 0,3]; `depth` ∈ [4; 10]).
+
+Achado da calibração (medido no Modelo A, `lr=0,01`): **a profundidade quase não move o
+best_iter — o lever é o `learning_rate`**. Varrendo a profundidade: depth 6 → ~423 iter,
+depth 4 → 444, depth 2 → 525, **depth 1 → 803**. Só com `depth=1` (stumps) e
+`lr=0,008` (= `0,01·803/1000`, levemente abaixo do piso heurístico 0,01, mas valor que o
+próprio CatBoost auto‑seleciona em datasets grandes) o best_iter passou de 1000.
+
+| experimento | AUC | Brier | LogLoss | best_iter |
+|---|---|---|---|---|
+| Ensemble +lags — Modelo B (depth=1) | 0,7010 | 0,108 | 0,3610 | 4700 |
+| Ensemble +lags (A+B) **depth=1** | 0,7033 | 0,108 | 0,3612 | — |
+| Ensemble +lags — Modelo A (depth=1) | 0,6971 | 0,108 | 0,3646 | 1071 |
+
+> Ambos os modelos com **`depth=1`, `lr=0,008` (mesmo lr)** e best_iter ≥ 1000 (A=1071,
+> B=4700 — o val de B, anos 2019‑20, melhora por muito mais rounds). **Resultado: pior que
+> a variante +lags original (0,7033 < 0,7155) e bem abaixo do base (0,741).** Árvores
+> `depth=1` são learners fracos demais: muitas iterações não recuperam a capacidade de
+> capturar interações. O early stopping precoce **não era a causa** do baixo desempenho —
+> forçar ~1000 iter via árvores rasas apenas troca capacidade por número de iterações.
+> Artefatos: `outputs/runpod_ensemble_lags_depth1/`.
+
 ---
 
 ## 3. Conclusões
@@ -78,6 +105,11 @@ Ver `outputs/tables/metricas_2023_consolidado.csv`.
    (0,642→0,654) era um artefato do regime bugado.
 4. **Dados recentes generalizam melhor**: Modelo B (fit 2021‑22) > Modelo A (fit 2019‑20)
    nas duas variantes.
+5. **Forçar ~1000 iter não salva os lags**: a variante +lags com `depth=1`/`lr=0,008`
+   (early stopping em 1071/4700) ficou em **0,7033 — pior que os lags originais (0,7155)**.
+   O early stopping precoce era *sintoma* (capacidade alta + overfit), não a causa; rasear
+   as árvores para alongar o treino só troca capacidade por iterações. Confirma a conclusão
+   3: os lags não ajudam no regime corrigido.
 
 **Melhor modelo: Ensemble base sem lags** — `outputs/runpod_ensemble_base/`.
 
