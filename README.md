@@ -214,17 +214,21 @@ O modo `python persona_categorias.py privado` **exclui o setor público** (`natu
 servidor público, o piso de risco vira o veterano de banco/grande empresa privada).
 
 **5) Apresentação em PDF** *(quase-agnóstico)* — `gerar_apresentacao.py`
-Gera um deck **16:9** (`matplotlib.PdfPages`, sem dependências externas) em 3 partes:
+Gera um deck **16:9** (`matplotlib.PdfPages`, sem dependências externas) em 4 partes:
 **(a) modelo** — como o ensemble base foi treinado (ensemble cross-temporal A/B, CatBoost,
 calibração e importância); **(b) categorização** — curva IG×K, K\*=23 e a tabela das 23
 categorias; **(c) personas** — 4 *small-multiples* do gradiente + 1 slide por grupo de
-risco (Mínimo → Alto). Lê `metrics_ensemble.json`, `importancia_ensemble.csv`, as figuras
-de `outputs/figures/` e as tabelas `binning_infogain_*` e `persona_categorias.csv`.
+risco (Mínimo → Alto); **(d) apêndice — consignado privado** — contexto + as 5 personas
+recomputadas **sem o setor público**, a partir de `persona_categorias_privado.csv` (texto
+em `PERSONA_TXT_PRIV`). Lê `metrics_ensemble.json`, `importancia_ensemble.csv`, as figuras
+de `outputs/figures/` e as tabelas `binning_infogain_*`, `persona_categorias.csv` e
+`persona_categorias_privado.csv`.
 Saída: [`outputs/apresentacao_risco_desligamento.pdf`](outputs/apresentacao_risco_desligamento.pdf).
-> Outro modelo: regenere as etapas 1–4 (tabelas/figuras) e **reescreva os textos
-> narrativos das personas** (dicionário `PERSONA_TXT` no script) e os rótulos, pois são
-> específicos dos achados deste modelo. Os números (métricas, tabela, gráficos) se
-> atualizam sozinhos a partir das tabelas.
+> Outro modelo: regenere as etapas 1–4 (incl. `persona_categorias.py` **e**
+> `persona_categorias.py privado`) e **reescreva os textos narrativos das personas**
+> (`PERSONA_TXT` e `PERSONA_TXT_PRIV` no script) e os rótulos, pois são específicos dos
+> achados do modelo. Os números (métricas, tabela, gráficos) se atualizam das tabelas.
+> Inspeção sem poppler: `runpy.run_path("gerar_apresentacao.py")["pages"][i].savefig(png)`.
 
 **O que as personas revelam:** o risco cresce de **servidor público estatutário** (menor
 risco) → CLT na indústria/saúde → comércio e serviços em pequenas empresas → **operário

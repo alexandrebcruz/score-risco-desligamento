@@ -165,14 +165,17 @@ resumível; o pyarrow falha ao criar arquivo direto no mount `/mnt/d` → escrev
    isso vira os slides de **Apêndice** (o piso de risco deixa de ser o servidor público
    e passa a ser o veterano de banco/grande empresa privada).
 5. **Apresentação PDF** (`gerar_apresentacao.py`) — deck 16:9 via `matplotlib.PdfPages`
-   (sem deps externas), 3 partes: (a) treino do ensemble base, (b) categorização (curva
+   (sem deps externas), 4 partes: (a) treino do ensemble base, (b) categorização (curva
    IG×K + tabela das 23), (c) personas (4 small-multiples do gradiente + 1 slide por
-   grupo de risco Mínimo→Alto). Lê metrics/importância/calibração + tabelas
-   `binning_infogain_*`/`persona_categorias.csv` + figuras de `outputs/figures/`. Saída:
-   `outputs/apresentacao_risco_desligamento.pdf`. **Inspeção:** sem poppler, dumpar páginas
-   via `runpy.run_path(...)["pages"][i].savefig(png)` e ler o PNG. Outro modelo: refaça 1–4
-   e **REESCREVA os textos das personas** (dict `PERSONA_TXT`) e rótulos (são específicos
-   dos achados; números/gráficos se atualizam das tabelas). `MPLCONFIGDIR=/tmp/mpl`.
+   grupo de risco Mínimo→Alto), (d) **apêndice consignado privado** (contexto + 5 personas
+   recomputadas SEM o setor público, de `persona_categorias_privado.csv`). Lê metrics/
+   importância/calibração + tabelas `binning_infogain_*`/`persona_categorias*.csv` +
+   figuras de `outputs/figures/`. Saída: `outputs/apresentacao_risco_desligamento.pdf`.
+   **Inspeção:** sem poppler, dumpar páginas via `runpy.run_path(...)["pages"][i].savefig(png)`
+   e ler o PNG. Outro modelo: refaça 1–4 (incl. `persona_categorias.py privado`) e
+   **REESCREVA os textos das personas** — dicts `PERSONA_TXT` (geral) e `PERSONA_TXT_PRIV`
+   (apêndice) — e rótulos (são específicos dos achados; números/gráficos se atualizam das
+   tabelas). `grupo_slide` é parametrizado (`pers`/`persona_txt`/`inds_spec`). `MPLCONFIGDIR=/tmp/mpl`.
 
 ---
 
