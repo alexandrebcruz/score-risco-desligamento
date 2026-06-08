@@ -540,12 +540,13 @@ surv_estatisticas()
 # Se DECK_DUMP_PNG estiver setado, também exporta cada slide como PNG nesse diretório
 # (usado por gerar_apresentacao_html.py para montar a versão HTML do deck).
 _DUMP = os.environ.get("DECK_DUMP_PNG")
+_FMT = os.environ.get("DECK_DUMP_FMT", "png")     # png | svg (usado pelo deck HTML)
 if _DUMP:
     os.makedirs(_DUMP, exist_ok=True)
 with PdfPages(PDF) as pdf:
     for i, f in enumerate(pages):
         pdf.savefig(f, facecolor="white")
         if _DUMP:
-            f.savefig(f"{_DUMP}/slide_{i:02d}.png", dpi=100, facecolor="white")
+            f.savefig(f"{_DUMP}/slide_{i:02d}.{_FMT}", dpi=100, facecolor="white")
         plt.close(f)
 print(f"OK: {PDF} ({len(pages)} slides)")

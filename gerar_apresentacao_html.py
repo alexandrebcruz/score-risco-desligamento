@@ -9,26 +9,42 @@
 Uso:  MPLCONFIGDIR=/tmp/mpl /tmp/consig_venv/bin/python gerar_apresentacao_html.py
 Saída: outputs/apresentacao_risco_desligamento.html
 """
-import os, runpy, base64, json, shutil
+import os, runpy, json, shutil, re
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/mpl")
 import pandas as pd
+import matplotlib; matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+plt.rcParams["svg.fonttype"] = "path"   # glyphs como vetor -> layout idêntico, sem depender de fontes do sistema
 from matplotlib import cm, colors
 
-DUMP = "/tmp/apresentacao_png"
-os.environ["DECK_DUMP_PNG"] = DUMP
+DUMP = "/tmp/apresentacao_svg"
+os.environ["DECK_DUMP_PNG"] = DUMP      # diretório do dump
+os.environ["DECK_DUMP_FMT"] = "svg"     # exporta cada slide como SVG vetorial (não PNG)
 OUT = "outputs/apresentacao_risco_desligamento.html"
 TMP = "/tmp/apresentacao_risco_desligamento.html"
 
-# ---------- 1. roda o deck (gera PDF + dump dos slides em PNG) ----------
+# ---------- 1. roda o deck (gera PDF + dump dos slides em SVG) ----------
 print("renderizando slides via gerar_apresentacao.py ...")
 ns = runpy.run_path("gerar_apresentacao.py")
 NP = len(ns["pages"])
 B1, B2 = NP - 3, NP - 2          # índices dos slides interativos (surv_curva, surv_weibull)
 print(f"{NP} slides; interativos: B1={B1}, B2={B2}")
 
-def b64(path):
-    with open(path, "rb") as f:
-        return base64.b64encode(f.read()).decode()
+def inline_svg(path, pfx):
+    """Insere o SVG do matplotlib inline, escalado p/ preencher o slide. Prefixa todos os
+    ids/refs com `pfx` (evita colisão entre os 26 SVGs no mesmo documento) e remove o
+    <style>*{}</style> global (reposto escopado no CSS)."""
+    s = open(path, encoding="utf-8").read()
+    s = re.sub(r"<\?xml[^>]*\?>", "", s)
+    s = re.sub(r"<!DOCTYPE.*?>", "", s, flags=re.S)
+    s = re.sub(r"<style[^>]*>.*?</style>", "", s, flags=re.S)
+    s = re.sub(r'\bid="([^"]+)"', lambda m: 'id="%s%s"' % (pfx, m.group(1)), s)
+    s = re.sub(r'href="#([^"]+)"', lambda m: 'href="#%s%s"' % (pfx, m.group(1)), s)
+    s = re.sub(r'url\(#([^)]+)\)', lambda m: 'url(#%s%s)' % (pfx, m.group(1)), s)
+    s = re.sub(r'(<svg\b[^>]*?)\s+width="[^"]*"', r'\1', s, count=1)
+    s = re.sub(r'(<svg\b[^>]*?)\s+height="[^"]*"', r'\1', s, count=1)
+    s = re.sub(r'<svg\b', '<svg class="deckslide" preserveAspectRatio="xMidYMid meet"', s, count=1)
+    return s.strip()
 
 # ---------- 2. dados de sobrevivência (mesma fonte do HTML interativo) ----------
 km = pd.read_csv("outputs/tables/sobrevivencia_km_2023.csv")
@@ -112,7 +128,7 @@ for i in range(NP):
         slides.append(interactive_slide("TEMPO ATÉ O DESLIGAMENTO · EXTRAPOLAÇÃO",
                       "Estendendo as curvas além de 12 meses (Weibull)", B2_TXT, "weib"))
     else:
-        slides.append(f'<div class="slide"><img class="full" src="data:image/png;base64,{b64(f"{DUMP}/slide_{i:02d}.png")}"></div>')
+        slides.append(f'<div class="slide">{inline_svg(f"{DUMP}/slide_{i:02d}.svg", f"s{i:02d}_")}</div>')
 SLIDES = "\n".join(slides)
 
 # ---------- 5. template HTML ----------
@@ -130,6 +146,9 @@ HTML = r"""<!DOCTYPE html>
   .slide{position:absolute;inset:0;display:none;}
   .slide.active{display:block;}
   .full{width:100%;height:100%;object-fit:contain;}
+  /* SVG vetorial de cada slide estático (substitui os PNGs): preenche o slide, layout idêntico */
+  .deckslide{position:absolute;inset:0;width:100%;height:100%;}
+  .deckslide *{stroke-linejoin:round;stroke-linecap:butt;}
   /* slide interativo */
   .cust{background:#fff;}
   .hb{position:absolute;top:0;left:0;right:0;height:14%;background:var(--navy);border-left:6px solid #f4a722;
@@ -150,7 +169,7 @@ HTML = r"""<!DOCTYPE html>
   .chip{width:calc(var(--u)*1.5);height:calc(var(--u)*1.5);border-radius:4px;border:1.5px solid var(--c);
         background:var(--c);color:#fff;font-size:calc(var(--u)*0.82);font-weight:700;cursor:pointer;padding:0;line-height:1;}
   .chip.off{background:#fff;color:#bbb;border-color:#ddd;}
-  svg{flex:1 1 auto;width:100%;min-height:0;}
+  .chartwrap svg{flex:1 1 auto;width:100%;min-height:0;}
   .grid{stroke:#e6e6e6;stroke-width:1;} .ax{stroke:#999;stroke-width:1;} .tk{fill:#666;font-size:11px;} .al{fill:#1b2430;font-size:12px;}
   .cv{fill:none;stroke-width:1.7;} .ext{fill:none;stroke-width:1.4;stroke-dasharray:5 4;} .dt{stroke:#fff;stroke-width:.5;}
   .bound{stroke:#999;stroke-width:1;stroke-dasharray:2 3;} .guide{stroke:#888;stroke-dasharray:4 3;stroke-width:1;visibility:hidden;}
