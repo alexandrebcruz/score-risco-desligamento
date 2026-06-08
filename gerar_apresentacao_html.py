@@ -154,8 +154,8 @@ HTML = r"""<!DOCTYPE html>
   .cv{fill:none;stroke-width:1.7;} .ext{fill:none;stroke-width:1.4;stroke-dasharray:5 4;} .dt{stroke:#fff;stroke-width:.5;}
   .bound{stroke:#999;stroke-width:1;stroke-dasharray:2 3;} .guide{stroke:#888;stroke-dasharray:4 3;stroke-width:1;visibility:hidden;}
   /* navegação */
-  /* navegação presa ao VIEWPORT (não ao palco) -> nunca recortada em paisagem no tablet */
-  .nav{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:calc(env(safe-area-inset-right,0px) + 10px);
+  /* navegação presa ao PALCO (canto sup. direito do slide), nunca na barra preta do viewport */
+  .nav{position:absolute;top:1.6%;right:1.6%;
        display:flex;align-items:center;gap:10px;z-index:50;
        background:rgba(40,60,95,.92);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:18px;padding:4px 12px;font-size:13px;}
   .nav button{background:none;border:none;color:#fff;font-size:19px;cursor:pointer;line-height:1;padding:0 5px;}
