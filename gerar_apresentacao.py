@@ -286,23 +286,29 @@ def metodo_persona():
 metodo_persona()
 
 def gradiente_persona():
-    fig = new_slide(); header(fig, "PERSONAS · GRADIENTE", "Do setor público à construção civil")
-    p = PERS.sort_values("categoria")
-    ax = fig.add_axes([0.085, 0.215, 0.83, 0.535])
-    ax.bar(p.categoria, p["taxa_y"], color=[gcolor(c) for c in p.categoria], alpha=.85)
-    ax.set_ylabel("taxa real de dispensa (%)", color=INK)
-    ax.set_xlabel("categoria  (1 = menor risco · 23 = maior risco)")
-    ax.set_xticks(range(1, 24)); ax.tick_params(labelsize=8.5); ax.set_ylim(0, 78)
-    ax2 = ax.twinx()
-    ax2.plot(p.categoria, p["publico%"], color="#1a9850", lw=2.2, marker="o", ms=4, label="% setor público")
-    ax2.plot(p.categoria, p["tempo_anos"], color="#7a3b9e", lw=2.2, marker="s", ms=4, label="tempo médio de vínculo (anos)")
-    ax2.set_ylabel("% setor público   /   tempo (anos)")
-    ax2.legend(loc="upper center", fontsize=10.5, ncol=2, frameon=True, framealpha=.95)
-    ax.grid(axis="y", alpha=.25)
-    fig.text(0.085, 0.115, "Conforme o risco sobe (esquerda → direita): o setor público desaba (linha verde) e o tempo de vínculo",
-             fontsize=11, color=GREY)
-    fig.text(0.085, 0.078, "encurta (linha roxa) — do servidor público estável ao operário da construção em micro construtora.",
-             fontsize=11, color=GREY)
+    fig = new_slide(); header(fig, "PERSONAS · GRADIENTE", "O que muda à medida que o risco sobe (categorias 1 → 23)")
+    p = PERS.sort_values("categoria"); cats = p.categoria.values; XT = [1, 5, 10, 15, 20, 23]
+    def panel(pos, titulo, vals, kind, cor, xlab=False):
+        ax = fig.add_axes(pos)
+        if kind == "bar":
+            ax.bar(cats, vals, color=[gcolor(c) for c in cats], alpha=.92)
+        else:
+            ax.fill_between(cats, vals, color=cor, alpha=.16)
+            ax.plot(cats, vals, color=cor, lw=2.6, marker="o", ms=3.5)
+        ax.set_title(titulo, fontsize=12.5, weight="bold", color=INK, pad=5, loc="left")
+        ax.set_xlim(0.5, 23.5); ax.set_xticks(XT); ax.tick_params(labelsize=8.5)
+        if xlab: ax.set_xlabel("categoria de risco  (1 → 23)", fontsize=9.5)
+        ax.grid(axis="y", alpha=.25)
+        for s in ("top", "right"): ax.spines[s].set_visible(False)
+        return ax
+    panel([0.075, 0.50, 0.40, 0.255], "Risco — taxa real de dispensa (%)", p["taxa_y"].values, "bar", None)
+    panel([0.565, 0.50, 0.40, 0.255], "Setor público (%)  ▼ desaba", p["publico%"].values, "line", "#1a9850")
+    panel([0.075, 0.185, 0.40, 0.255], "Tempo de vínculo (anos)  ▼ encurta", p["tempo_anos"].values, "line", "#7a3b9e", True)
+    panel([0.565, 0.185, 0.40, 0.255], "Micro/peq. empresa ≤49 func. (%)  ▲ sobe", p["micro_peq%"].values, "line", "#e8743b", True)
+    fig.text(0.075, 0.095, "Cada painel mostra UMA variável nas 23 categorias (eixo x). As cores do 1º painel = os 5 grupos de risco.",
+             fontsize=10.5, color=GREY)
+    fig.text(0.075, 0.06, "Risco ↑  ⇒  setor público some, tempo de casa encurta e empresa diminui: do servidor estável à "
+             "construção em micro construtora.", fontsize=10.5, color=GREY)
     footer(fig, "11"); pages.append(fig)
 gradiente_persona()
 
