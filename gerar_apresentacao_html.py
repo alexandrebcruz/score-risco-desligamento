@@ -195,7 +195,8 @@ HTML = r"""<!DOCTYPE html>
   .boxwrap{position:absolute;left:2%;top:15.5%;width:60%;height:82%;}
   .boxwrap svg{width:100%;height:100%;}
   .box{cursor:pointer;}
-  .boxtable{position:absolute;right:1.5%;top:15.5%;width:35%;height:79%;overflow:auto;}
+  .boxtable{position:absolute;right:2.5%;top:15.5%;width:33%;height:80%;overflow:auto;
+            display:flex;flex-direction:column;justify-content:center;}
   .boxtable table{border-collapse:collapse;width:100%;font-size:calc(var(--u)*0.95);font-variant-numeric:tabular-nums;}
   .boxtable th{background:var(--navy);color:#fff;padding:calc(var(--u)*0.15) calc(var(--u)*0.25);position:sticky;top:0;}
   .boxtable td{padding:calc(var(--u)*0.1) calc(var(--u)*0.25);text-align:center;border-bottom:1px solid #eee;}
@@ -213,8 +214,12 @@ HTML = r"""<!DOCTYPE html>
        background:rgba(40,60,95,.92);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:18px;padding:4px 12px;font-size:13px;}
   .nav button{background:none;border:none;color:#fff;font-size:19px;cursor:pointer;line-height:1;padding:0 5px;}
   .nav button:hover{color:#f4a722;}
-  #tip{position:fixed;pointer-events:none;background:#111;color:#fff;font-size:11px;padding:6px 8px;border-radius:6px;
-       max-width:200px;visibility:hidden;z-index:99;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,.3);}
+  #tip{position:fixed;pointer-events:none;background:#111;color:#fff;font-size:11.5px;padding:8px 10px;border-radius:7px;
+       max-width:250px;visibility:hidden;z-index:99;line-height:1.4;box-shadow:0 2px 10px rgba(0,0,0,.35);}
+  #tip .tt-h{font-weight:700;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #555;}
+  #tip .tt-r{display:flex;justify-content:space-between;gap:18px;line-height:1.55;}
+  #tip .tt-r span{color:#aab2c0;}
+  #tip .tt-r b{font-variant-numeric:tabular-nums;}
 </style></head>
 <body>
 <div class="deck"><div class="stage" id="stage">
@@ -345,9 +350,16 @@ function makeBoxChart(){
   function boxHov(k,on){
     const g=boxes[k]; if(g){ const bx=g.querySelector('.bx'); bx.setAttribute('stroke-width',on?2.6:1); bx.setAttribute('fill-opacity',on?0.7:0.45); }
     const row=tb.querySelector('tr[data-k="'+k+'"]'); if(row) row.classList.toggle('hl',on);
-    if(on){ const s=DATA.find(d=>d.k===k), r=svg.getBoundingClientRect();
-      tip.innerHTML='<b>Categoria '+k+'</b> · risco '+s.risco12+'%<br>Q1 <b>'+fmt(s.q1)+'</b> · mediana <b>'+fmt(s.medm)+'</b> · média <b>'+fmt(s.media)+'</b> · Q3 <b>'+fmt(s.q3)+'</b> meses<br>IQR (Q1–Q3): '+fmt(s.q1)+'–'+fmt(s.q3)+' meses';
-      tip.style.left=Math.min(r.left+xC(k)/W*r.width+10,window.innerWidth-210)+'px';
+    if(on){ const s=DATA.find(d=>d.k===k), r=svg.getBoundingClientRect(), gr=GROUPS.find(x=>x.cats.includes(k));
+      const row=(l,v)=>'<div class="tt-r"><span>'+l+'</span><b>'+v+'</b></div>';
+      tip.innerHTML='<div class="tt-h">Categoria '+k+(gr?' · Risco '+gr.nome:'')+'</div>'+
+        row('Risco em 12 meses', s.risco12+'%')+
+        row('Q1 (25%)', fmt(s.q1)+' meses')+
+        row('Mediana (50%)', fmt(s.medm)+' meses')+
+        row('Média', fmt(s.media)+' meses')+
+        row('Q3 (75%)', fmt(s.q3)+' meses')+
+        row('IQR (Q1–Q3)', fmt(s.q1)+'–'+fmt(s.q3)+' meses');
+      tip.style.left=Math.min(r.left+xC(k)/W*r.width+10,window.innerWidth-260)+'px';
       tip.style.top=(r.top+yPix(s.q3)/HT*r.height-8)+'px'; tip.style.visibility='visible';
     } else tip.style.visibility='hidden';
   }
