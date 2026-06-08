@@ -53,15 +53,19 @@ ext = pd.read_csv("outputs/tables/sobrevivencia_weibull_extrap_2023.csv")
 mono = pd.read_csv("outputs/tables/sobrevivencia_weibull_estatisticas_mono_2023.csv").set_index("categoria")
 res = pd.read_csv("outputs/tables/sobrevivencia_resumo_2023.csv").set_index("categoria")
 ks = sorted(km["categoria"].unique())
+# cores idênticas à figura (RdYlGn_r normalizado em [min,max] das categorias)
 cmap = cm.get_cmap("RdYlGn_r"); norm = colors.Normalize(vmin=min(ks), vmax=max(ks))
 cor = {k: colors.to_hex(cmap(norm(k))) for k in ks}
+def _contraste(hx):                      # cor de texto legível sobre qualquer fundo (luminância)
+    r, g, b = (int(hx[i:i + 2], 16) for i in (1, 3, 5))
+    return "#000000" if 0.299 * r + 0.587 * g + 0.114 * b > 150 else "#ffffff"
 
 series = []
 for k in ks:
     S = [round(float(v), 5) for v in km[km.categoria == k].sort_values("mes")["S"].tolist()]
     W = [round(float(v), 5) for v in ext[ext.categoria == k].sort_values("mes")["S_weibull"].tolist()]
     mo = mono.loc[k]
-    series.append({"k": int(k), "cor": cor[k], "S": S, "W": W,
+    series.append({"k": int(k), "cor": cor[k], "txt": _contraste(cor[k]), "S": S, "W": W,
                    "risco12": round(float(res.loc[k, "risco_deslig_12m_KM"]) * 100, 1),
                    "q1": round(float(mo["q1_meses_mono"]), 1),
                    "medm": round(float(mo["mediana_meses_mono"]), 1),
@@ -342,7 +346,7 @@ function makeBoxChart(){
   // tabela
   const tb=document.getElementById('boxtable');
   let html='<table><thead><tr><th>cat</th><th>Q1</th><th>med</th><th>méd</th><th>Q3</th></tr></thead><tbody>';
-  DATA.forEach(s=>{ html+='<tr data-k="'+s.k+'"><td class="ct" style="background:'+s.cor+'">'+s.k+'</td><td>'+fmt(s.q1)+'</td><td>'+fmt(s.medm)+'</td><td>'+fmt(s.media)+'</td><td>'+fmt(s.q3)+'</td></tr>'; });
+  DATA.forEach(s=>{ html+='<tr data-k="'+s.k+'"><td class="ct" style="background:'+s.cor+';color:'+s.txt+'">'+s.k+'</td><td>'+fmt(s.q1)+'</td><td>'+fmt(s.medm)+'</td><td>'+fmt(s.media)+'</td><td>'+fmt(s.q3)+'</td></tr>'; });
   tb.innerHTML=html+'</tbody></table>';
   tb.querySelectorAll('tr[data-k]').forEach(r=>{ const k=+r.dataset.k;
     r.addEventListener('mouseenter',()=>boxHov(k,true)); r.addEventListener('mouseleave',()=>boxHov(k,false)); });
