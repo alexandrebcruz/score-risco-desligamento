@@ -71,6 +71,7 @@ RAIS_FIELD_TOKENS = {
     "tempo_emprego_meses": [["tempo", "emprego"]],    # 'tempo emprego' exato
     "vinculo_ativo_3112":  [["vinculo", "ativo"]],
     "mes_desligamento":    [["mes", "desligamento"]],
+    "mes_admissao":        [["mes", "admissao"]],     # 0=admitido antes do ano; 1-12=mês de admissão no ano
     "motivo_desligamento": [["motivo", "desligamento"]],
     # --- variáveis adicionais (enriquecimento do modelo) ---
     "tipo_vinculo":        [["tipo", "vinculo"]],
@@ -129,7 +130,7 @@ def _resolve_rais_columns(header: list[str]) -> dict:
                 break
     faltam = set(RAIS_FIELD_TOKENS) - set(achado)
     # colunas adicionais são OPCIONAIS (formato antigo pode não tê-las) -> default depois.
-    opcionais = set(RAIS_EXTRA_CAT) | {"qtd_dias_afastamento"}
+    opcionais = set(RAIS_EXTRA_CAT) | {"qtd_dias_afastamento", "mes_admissao"}
     obrig = faltam - opcionais
     if obrig:
         raise KeyError(f"Colunas RAIS obrigatórias não resolvidas: {obrig} | header={header[:8]}...")
@@ -303,6 +304,9 @@ def clean_rais_real(df_bruto: pd.DataFrame) -> pd.DataFrame:
         "tempo_vinculo_meses": pd.to_numeric(df["tempo_emprego_meses"], errors="coerce"),
         "vinculo_ativo": df["vinculo_ativo_3112"].astype(int),
         "mes_deslig": pd.to_numeric(df["mes_desligamento"], errors="coerce").fillna(0).astype(int),
+        # 0 = vínculo admitido em ano anterior (vigente no início do ano); 1-12 = mês de admissão no ano
+        "mes_admissao": (pd.to_numeric(df["mes_admissao"], errors="coerce").fillna(0).astype(int)
+                         if "mes_admissao" in df.columns else 0),
         "motivo_unificado": df["motivo_desligamento"].map(MAPA_MOTIVO_RAIS).fillna("outros"),
         "separado": separado,
         # --- variáveis adicionais (enriquecimento) ---
