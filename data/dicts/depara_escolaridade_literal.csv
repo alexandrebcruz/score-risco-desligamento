@@ -1,0 +1,13 @@
+grau_instrucao,rotulo_layout,nome_completo,faixa_agrupada
+1,ANALFABETO,Analfabeto,ate_fund_incompleto
+2,ATE 5.A INC,Até 5ª série incompleta do fundamental,ate_fund_incompleto
+3,5.A CO FUND,5ª série completa do fundamental,ate_fund_incompleto
+4,6. A 9. FUND,6ª a 9ª série (fundamental incompleto),ate_fund_incompleto
+5,FUND COMPL,Ensino fundamental completo,fundamental
+6,MEDIO INCOMP,Ensino médio incompleto,medio_incompleto
+7,MEDIO COMPL,Ensino médio completo,medio_completo
+8,SUP. INCOMP,Ensino superior incompleto,superior_incompleto
+9,SUP. COMP,Ensino superior completo,superior
+10,MESTRADO,Mestrado,superior
+11,DOUTORADO,Doutorado,superior
+-1,IGNORADO,Ignorado,(default: nao_informado)
