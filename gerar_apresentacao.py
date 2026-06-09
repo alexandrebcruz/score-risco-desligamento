@@ -56,10 +56,12 @@ def footer(fig, n):
 def bullet(fig, x, y, lines, fs=13, dy=0.062, color=INK, gap_color="#f4a722"):
     for i, (b, t) in enumerate(lines):
         yy = y - i * dy
-        if b:
+        if b is True:
             fig.text(x, yy + 0.006, "▸", fontsize=fs, color=gap_color, va="center")
             fig.text(x + 0.022, yy, t, fontsize=fs, color=color, va="center")
-        else:
+        elif b is None:                      # continuação do bullet anterior (sem ▸)
+            fig.text(x + 0.022, yy, t, fontsize=fs, color=color, va="center")
+        else:                                # cabeçalho (b is False) em negrito
             fig.text(x, yy, t, fontsize=fs, color=color, va="center", weight="bold")
 
 PDF = "outputs/apresentacao_risco_desligamento.pdf"
@@ -97,13 +99,13 @@ def contexto():
     bullet(fig, 0.05, 0.74, [
         (False, "Objetivo"),
         (True, "Estimar a probabilidade de um vínculo formal ser encerrado por"),
-        (True, "dispensa sem justa causa nos meses seguintes."),
+        (None, "dispensa sem justa causa nos meses seguintes."),
         (False, "Dados"),
         (True, "RAIS (Relação Anual de Informações Sociais) — base pública nacional"),
-        (True, "de todos os vínculos formais. Anos 2019–2023, ~280 milhões de vínculos."),
+        (None, "de todos os vínculos formais. Anos 2019–2023, ~280 milhões de vínculos."),
         (False, "Validação honesta (out-of-time)"),
         (True, "Treina em ≤2022 e testa em 2023, ano nunca visto — mede a capacidade"),
-        (True, "real de prever o futuro, não de decorar o passado."),
+        (None, "real de prever o futuro, não de decorar o passado."),
     ], fs=13.2, dy=0.072)
     # caixa lateral
     ax = fig.add_axes([0.66, 0.16, 0.30, 0.62]); ax.axis("off"); ax.set_xlim(0,1); ax.set_ylim(0,1)
@@ -126,11 +128,11 @@ def preparo():
         (False, "22 features por vínculo (todas disponíveis na RAIS)"),
         (True, "Ocupação (CBO) e setor (CNAE) — em níveis hierárquicos (6→1 dígito)"),
         (True, "Tempo de vínculo, idade, tipo de contrato, faixa de remuneração,"),
-        (True, "tamanho e natureza da empresa, jornada, afastamentos, UF."),
+        (None, "tamanho e natureza da empresa, jornada, afastamentos, UF."),
         (False, "Harmonização de códigos entre anos (pré-processamento)"),
         (True, "Alguns códigos mudaram de formato entre 2022 e 2023; sem"),
-        (True, "padronizar, o modelo veria categorias 'novas' (desconhecidas)"),
-        (True, "no teste de 2023. A normalização garante consistência."),
+        (None, "padronizar, o modelo veria categorias 'novas' (desconhecidas)"),
+        (None, "no teste de 2023. A normalização garante consistência."),
     ], fs=12.8, dy=0.067)
     # mini-tabela ilustrativa da normalização (parte do pré-processamento do modelo)
     ax = fig.add_axes([0.58, 0.22, 0.38, 0.40]); ax.axis("off")
@@ -172,7 +174,7 @@ def ensemble():
     bullet(fig, 0.62, 0.74, [
         (False, "Por que cross-temporal?"),
         (True, "Cada modelo aprende de um par de anos"),
-        (True, "e valida no outro; a média reduz variância."),
+        (None, "e valida no outro; a média reduz variância."),
         (False, "Algoritmo"),
         (True, "CatBoost (gradient boosting) em GPU"),
         (True, "Perda e early-stopping em LogLoss"),
@@ -213,13 +215,13 @@ def metodo_cat():
     bullet(fig, 0.05, 0.75, [
         (False, "Ideia"),
         (True, "Fatiar a probabilidade prevista em faixas que separem ao máximo"),
-        (True, "quem é desligado de quem não é (ganho de informação sobre o alvo)."),
+        (None, "quem é desligado de quem não é (ganho de informação sobre o alvo)."),
         (False, "Como"),
         (True, "Para cada nº de categorias K, a divisão ótima é achada por"),
-        (True, "programação dinâmica (maximiza a informação mútua I(faixa; alvo))."),
+        (None, "programação dinâmica (maximiza a informação mútua I(faixa; alvo))."),
         (False, "Critério de parada"),
         (True, "Aumenta-se K enquanto o risco médio das faixas continua"),
-        (True, "estritamente crescente. Quando a ordem quebra, para."),
+        (None, "estritamente crescente. Quando a ordem quebra, para."),
     ], fs=12.8, dy=0.066)
     # painel: IG x K
     ax = fig.add_axes([0.60, 0.16, 0.36, 0.60])
@@ -277,12 +279,12 @@ def metodo_persona():
         (False, "Duas medidas por característica"),
         (True, "Composição interna — do que a categoria é feita (% de cada valor)."),
         (True, "Distintividade (lift) — share na categoria ÷ share na base;"),
-        (True, "o que é desproporcionalmente comum ali (piso de 5%)."),
+        (None, "o que é desproporcionalmente comum ali (piso de 5%)."),
         (False, "Tradução"),
         (True, "Códigos de CBO/CNAE/tipo de vínculo traduzidos pelo dicionário da RAIS."),
         (False, "Leitura"),
         (True, "Os indicadores são lidos ao longo das 23 categorias ordenadas"),
-        (True, "por risco — como o perfil muda do menor para o maior risco."),
+        (None, "por risco — como o perfil muda do menor para o maior risco."),
     ], fs=13.2, dy=0.072)
     footer(fig, "10"); pages.append(fig)
 metodo_persona()
