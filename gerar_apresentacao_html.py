@@ -275,10 +275,45 @@ _INTRO_B = bullets_html([
     (False, "Ressalvas"),
     (True, ">12 meses é extrapolação; refine com LGD e saldo devedor decrescente."),
 ])
+# ilustração vetorial (contracheque -> R$ -> banco -> relógio -> curva S(t)) p/ preencher o slide
+CONSIG_ART = '''<svg viewBox="0 0 980 200" preserveAspectRatio="xMidYMid meet">
+  <rect x="14" y="18" width="200" height="150" rx="10" fill="#fff" stroke="#cdd5df" stroke-width="2"/>
+  <rect x="14" y="18" width="200" height="30" rx="10" fill="#14233f"/>
+  <text x="114" y="39" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">CONTRACHEQUE</text>
+  <rect x="30" y="62" width="120" height="9" rx="4" fill="#e1e7ee"/>
+  <rect x="30" y="80" width="155" height="9" rx="4" fill="#e1e7ee"/>
+  <rect x="30" y="98" width="95" height="9" rx="4" fill="#e1e7ee"/>
+  <rect x="24" y="120" width="180" height="34" rx="6" fill="#fdebc9" stroke="#f4a722" stroke-width="1.5"/>
+  <text x="34" y="142" fill="#b9791a" font-size="12.5" font-weight="700">− parcela do consignado</text>
+  <text x="114" y="192" text-anchor="middle" fill="#5b6675" font-size="13">Desconto direto na folha</text>
+  <line x1="226" y1="92" x2="300" y2="92" stroke="#3b7dba" stroke-width="3"/>
+  <path d="M300 92 l-11 -7 v14 z" fill="#3b7dba"/>
+  <circle cx="263" cy="64" r="15" fill="#f4a722"/><text x="263" y="69" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">R$</text>
+  <path d="M320 60 L420 26 L520 60 Z" fill="#14233f"/>
+  <rect x="326" y="60" width="188" height="10" fill="#14233f"/>
+  <rect x="344" y="72" width="16" height="74" fill="#9fb0c6"/><rect x="376" y="72" width="16" height="74" fill="#9fb0c6"/>
+  <rect x="408" y="72" width="16" height="74" fill="#9fb0c6"/><rect x="440" y="72" width="16" height="74" fill="#9fb0c6"/>
+  <rect x="472" y="72" width="16" height="74" fill="#9fb0c6"/>
+  <rect x="320" y="146" width="200" height="12" fill="#14233f"/>
+  <text x="420" y="192" text-anchor="middle" fill="#5b6675" font-size="13">Crédito consignado</text>
+  <line x1="540" y1="92" x2="612" y2="92" stroke="#3b7dba" stroke-width="3"/>
+  <path d="M612 92 l-11 -7 v14 z" fill="#3b7dba"/>
+  <circle cx="690" cy="92" r="50" fill="#fff" stroke="#3b7dba" stroke-width="4"/>
+  <line x1="690" y1="92" x2="690" y2="58" stroke="#14233f" stroke-width="4" stroke-linecap="round"/>
+  <line x1="690" y1="92" x2="715" y2="104" stroke="#14233f" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="690" cy="92" r="4" fill="#14233f"/>
+  <text x="690" y="192" text-anchor="middle" fill="#5b6675" font-size="13">Prazo: até quando paga</text>
+  <line x1="792" y1="42" x2="792" y2="150" stroke="#bbb" stroke-width="1.5"/>
+  <line x1="792" y1="150" x2="956" y2="150" stroke="#bbb" stroke-width="1.5"/>
+  <path d="M792 48 C 854 54, 902 112, 956 146" fill="none" stroke="#d73027" stroke-width="3.5"/>
+  <text x="804" y="42" fill="#d73027" font-size="13" font-weight="700">S(t)</text>
+  <text x="874" y="192" text-anchor="middle" fill="#5b6675" font-size="13">define o prazo máximo</text>
+</svg>'''
 def consig_intro_slide():
     return ('<div class="slide cust"><div class="hb"><span class="kick">APLICAÇÃO · CRÉDITO CONSIGNADO</span>'
             '<span class="ttl">Usando a sobrevivência para definir o prazo do consignado</span></div>'
-            '<div class="txt2a">' + _INTRO_A + '</div><div class="txt2b">' + _INTRO_B + '</div></div>')
+            '<div class="txt2a">' + _INTRO_A + '</div><div class="txt2b">' + _INTRO_B + '</div>'
+            '<div class="consigart">' + CONSIG_ART + '</div></div>')
 def consig_tables_slide():
     return ('<div class="slide cust"><div class="hb"><span class="kick">APLICAÇÃO · CRÉDITO CONSIGNADO</span>'
             '<span class="ttl">Prazo máximo e cobertura de parcelas por categoria</span></div>'
@@ -376,6 +411,8 @@ HTML = r"""<!DOCTYPE html>
   /* slides de aplicação ao consignado */
   .txt2a{position:absolute;left:4%;top:18%;width:44%;}
   .txt2b{position:absolute;left:52%;top:18%;width:44%;}
+  .consigart{position:absolute;left:5%;top:60%;width:90%;height:35%;}
+  .consigart svg{width:100%;height:100%;}
   .aptwrap-l{position:absolute;left:2%;top:15.5%;width:31%;height:82%;overflow:auto;}
   .aptwrap-r{position:absolute;left:35%;top:15.5%;width:63%;height:82%;overflow:auto;}
   .apt-h{font-weight:700;font-size:calc(var(--u)*0.92);color:var(--navy);margin-bottom:.35em;line-height:1.2;}
