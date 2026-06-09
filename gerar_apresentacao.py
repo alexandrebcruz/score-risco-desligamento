@@ -372,14 +372,17 @@ def grupo_slide(nome, cats, cor, n, pers=None, persona_txt=None, inds_spec=None,
     ax = fig.add_axes([0.05, 0.05, 0.47, 0.42]); ax.axis("off"); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
     ax.text(0.0, 0.95, "Características do grupo  (% no grupo · lift vs. média geral)",
             fontsize=11, weight="bold", color=INK)
+    fig.canvas.draw()                                          # realiza o renderer p/ medir o texto
+    rend = fig.canvas.get_renderer(); inv = ax.transData.inverted()
     for i, (lab, v, lift) in enumerate(notas):
         y = 0.80 - i * 0.105                                   # linhas mais próximas
         up = lift >= 1.0
         lc = "#1a9850" if up else "#d73027"                    # verde acima de 1, vermelho abaixo
         arw = "▲" if up else "▼"
         ax.text(0.02, y, f"{v:.0f}%", fontsize=15, weight="bold", color=cor, va="center")
-        ax.text(0.18, y, lab, fontsize=12, color=INK, va="center")
-        ax.text(0.99, y, f"{arw} lift {lift:.1f}×", fontsize=11.5, weight="bold", color=lc, va="center", ha="right")
+        tl = ax.text(0.18, y, lab, fontsize=12, color=INK, va="center")
+        xend = inv.transform((tl.get_window_extent(renderer=rend).x1, 0))[0]   # fim do rótulo
+        ax.text(xend + 0.025, y, f"{arw} lift {lift:.1f}×", fontsize=11.5, weight="bold", color=lc, va="center")
     # mini-cards numéricos
     ax2 = fig.add_axes([0.54, 0.10, 0.43, 0.34]); ax2.axis("off"); ax2.set_xlim(0,1); ax2.set_ylim(0,1)
     cards = [("Risco médio do grupo", f"{taxa:.1f}%"), ("Idade média", f"{wavg('idade_media'):.0f} anos"),
