@@ -420,14 +420,14 @@ fecho()
 PERS_PRIV = pd.read_csv("outputs/tables/persona_categorias_privado.csv")
 PERSONA_TXT_PRIV = {
     "Risco Mínimo": ("Veteranos de banco e de grandes empresas estáveis",
-        ["Setor financeiro (bancos — CNAE 64, lift 11×) e serviços essenciais/utilities (saneamento, correio); "
-         "grandes empregadores privados.",
+        ["Setor financeiro (CNAE 64, lift 11×): sobretudo bancos múltiplos (~50%) e Caixa econômica (~33%) — os bancões; "
+         "mais utilities (saneamento, correio); grandes empregadores privados.",
          "Longuíssimo tempo de casa (11–14 anos), mais velhos (42–50); muitos em afastamento de longa duração "
          "(estabilidade de fato).",
          "Sem o setor público, este é o PISO de risco do crédito privado (0,07–0,18%)."]),
     "Risco Baixo": ("CLT qualificado e consolidado (financeiro, saúde, indústria)",
-        ["CLT por prazo indeterminado em setor financeiro, saúde, indústria de alimentos e educação privada; "
-         "5–6 anos de casa, ensino médio/superior.",
+        ["CLT indeterminado em financeiro, saúde, indústria de alimentos e educação privada; mas o financeiro aqui é "
+         "menor e mais pulverizado — crédito cooperativo (~21%), holdings e bancos menores, com menos Caixa.",
          "No início do grupo (cat 3) entram temporários de agência e profissionais qualificados — é aqui que cai "
          "o bancário típico.",
          "Risco de 2–6%, bem abaixo da média."]),
