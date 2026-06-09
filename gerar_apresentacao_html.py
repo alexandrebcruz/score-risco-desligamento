@@ -226,6 +226,66 @@ def desempenho_slide():
   <div class="impwrap"><svg id="svg-imp" viewBox="0 0 560 470" preserveAspectRatio="xMidYMid meet"></svg></div>
 </div>'''
 
+# ---------- slides extra (HTML-only): aplicação ao crédito consignado ----------
+import math
+_kmS = {(int(r.categoria), int(r.mes)): float(r.S) for r in km.itertuples()}
+def _S(c, m):
+    if m <= 12: return _kmS[(c, m)]
+    lam, pp = float(mono.loc[c, "escala_lambda_meses"]), float(mono.loc[c, "shape_p"])
+    return math.exp(-(m / lam) ** pp)                       # >12m = extrapolação Weibull
+def _termo(c, conf):                                        # prazo p/ confiança conf de seguir empregado
+    lam, pp = float(mono.loc[c, "escala_lambda_meses"]), float(mono.loc[c, "shape_p"])
+    return lam * (-math.log(conf)) ** (1.0 / pp)
+def _cov(c, T): return sum(_S(c, m) for m in range(1, T + 1)) / T * 100   # % das T parcelas esperadas pagas
+def _heat(frac): return "hsl(%d,62%%,87%%)" % round(max(0.0, min(1.0, frac)) * 120)  # vermelho->verde
+CONFS = [("95%", 0.95), ("90%", 0.90), ("85%", 0.85), ("80%", 0.80)]
+TS = [6, 12, 18, 24, 36, 48, 60]
+def _catcell(k): return '<td class="ct" style="background:%s;color:%s">%d</td>' % (cor[k], _contraste(cor[k]), k)
+def _termo_tbl():
+    h = "<tr><th>cat</th>" + "".join("<th>%s</th>" % l for l, _ in CONFS) + "</tr>"
+    body = ""
+    for k in ks:
+        cells = ""
+        for _, c in CONFS:
+            t = _termo(k, c); disp = "120+" if t > 120 else "%.0f" % t
+            cells += '<td style="background:%s">%s</td>' % (_heat(min(t, 36) / 36), disp)
+        body += "<tr>" + _catcell(k) + cells + "</tr>"
+    return '<table class="aptbl"><thead>%s</thead><tbody>%s</tbody></table>' % (h, body)
+def _cov_tbl():
+    h = "<tr><th>cat</th>" + "".join("<th>T=%d</th>" % t for t in TS) + "</tr>"
+    body = ""
+    for k in ks:
+        cells = "".join('<td style="background:%s">%.0f%%</td>' % (_heat(_cov(k, t) / 100), _cov(k, t)) for t in TS)
+        body += "<tr>" + _catcell(k) + cells + "</tr>"
+    return '<table class="aptbl"><thead>%s</thead><tbody>%s</tbody></table>' % (h, body)
+TERMO_TBL, COV_TBL = _termo_tbl(), _cov_tbl()
+
+_INTRO_A = bullets_html([
+    (False, "A ligação com o consignado"),
+    (True, "No consignado, a parcela é descontada direto da folha de pagamento."),
+    (True, "Se a pessoa perde o emprego, o desconto para → risco de não pagamento."),
+    (True, "S(t) = P(seguir empregado após t meses) = P(o desconto seguir ativo)."),
+    (True, "Logo, o prazo deve caber na expectativa de permanência no emprego."),
+])
+_INTRO_B = bullets_html([
+    (False, "Como definir o prazo máximo"),
+    (True, "Confiança: prazo = t em que S(t)=c (ex.: 90%) — quantil do tempo até a dispensa."),
+    (True, "Cobertura: parcelas esperadas pagas = Σ S(m); exija ≥ β% das T parcelas."),
+    (True, "Risco-tier: faixas baixas → prazos longos; altas → curtos ou rejeição."),
+    (False, "Ressalvas"),
+    (True, ">12 meses é extrapolação; refine com LGD e saldo devedor decrescente."),
+])
+def consig_intro_slide():
+    return ('<div class="slide cust"><div class="hb"><span class="kick">APLICAÇÃO · CRÉDITO CONSIGNADO</span>'
+            '<span class="ttl">Usando a sobrevivência para definir o prazo do consignado</span></div>'
+            '<div class="txt2a">' + _INTRO_A + '</div><div class="txt2b">' + _INTRO_B + '</div></div>')
+def consig_tables_slide():
+    return ('<div class="slide cust"><div class="hb"><span class="kick">APLICAÇÃO · CRÉDITO CONSIGNADO</span>'
+            '<span class="ttl">Prazo máximo e cobertura de parcelas por categoria</span></div>'
+            '<div class="aptwrap-l"><div class="apt-h">Prazo máx. (meses) por confiança de seguir empregado</div>' + TERMO_TBL + '</div>'
+            '<div class="aptwrap-r"><div class="apt-h">Cobertura esperada de parcelas (% pagas em folha) por prazo T</div>' + COV_TBL +
+            '<div class="apt-note">T em meses · &gt;12m extrapolado (Weibull) · verde = melhor cobertura</div></div></div>')
+
 # ---------- 4. monta todos os slides ----------
 slides = []
 for i in range(NP):
@@ -241,6 +301,8 @@ for i in range(NP):
         slides.append(desempenho_slide())
     else:
         slides.append(f'<div class="slide">{inline_svg(f"{DUMP}/slide_{i:02d}.svg", f"s{i:02d}_")}</div>')
+slides.append(consig_intro_slide())      # slides extra ao final (HTML-only)
+slides.append(consig_tables_slide())
 SLIDES = "\n".join(slides)
 
 # ---------- 5. template HTML ----------
@@ -311,6 +373,17 @@ HTML = r"""<!DOCTYPE html>
   .impwrap{position:absolute;left:41%;top:14.5%;width:57%;height:83%;}
   .impwrap svg{width:100%;height:100%;}
   .imp-bar{cursor:pointer;}
+  /* slides de aplicação ao consignado */
+  .txt2a{position:absolute;left:4%;top:18%;width:44%;}
+  .txt2b{position:absolute;left:52%;top:18%;width:44%;}
+  .aptwrap-l{position:absolute;left:2%;top:15.5%;width:31%;height:82%;overflow:auto;}
+  .aptwrap-r{position:absolute;left:35%;top:15.5%;width:63%;height:82%;overflow:auto;}
+  .apt-h{font-weight:700;font-size:calc(var(--u)*0.92);color:var(--navy);margin-bottom:.35em;line-height:1.2;}
+  .apt-note{font-size:calc(var(--u)*0.8);color:var(--grey);margin-top:.35em;}
+  .aptbl{border-collapse:collapse;width:100%;font-size:calc(var(--u)*0.86);font-variant-numeric:tabular-nums;}
+  .aptbl th{background:var(--navy);color:#fff;padding:1px 3px;position:sticky;top:0;font-weight:600;}
+  .aptbl td{padding:1px 4px;text-align:center;border:1px solid #fff;}
+  .aptbl td.ct{font-weight:700;}
   .grid{stroke:#e6e6e6;stroke-width:1;} .ax{stroke:#999;stroke-width:1;} .tk{fill:#666;font-size:11px;} .al{fill:#1b2430;font-size:12px;}
   .cv{fill:none;stroke-width:1.7;} .ext{fill:none;stroke-width:1.4;stroke-dasharray:5 4;} .dt{stroke:#fff;stroke-width:.5;}
   .bound{stroke:#999;stroke-width:1;stroke-dasharray:2 3;} .guide{stroke:#888;stroke-dasharray:4 3;stroke-width:1;visibility:hidden;}

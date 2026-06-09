@@ -239,6 +239,11 @@ Fontes/controles em `--u` (1% da largura do palco) p/ escalar com o slide; naveg
 O **slide 5 (desempenho)** também é nativo/interativo: calibração em SVG + **importância clicável**
 (clique numa variável → explicação + exemplos de valores do dicionário `FEATINFO`, com de-paras
 da RAIS). Índices: desempenho=`4`, B1/B2/B3=`NP-3`/`NP-2`/`NP-1`. **Deck 100% vetorial (0 PNG raster).**
+Ao final há ainda **2 slides HTML-only de aplicação ao crédito consignado** (anexados após o loop,
+não estão no PDF): (1) explicação de como S(t) define o prazo do consignado; (2) duas tabelas por
+categoria — **prazo máximo** (confiança 95/90/85/80%, via `t=λ·(−ln c)^(1/p)`, inteiros, cap "120+")
+e **cobertura esperada de parcelas** (% pagas em folha por prazo T=6..60, `Σ S(m)/T`; S=KM≤12m + Weibull).
+Total: 30 slides.
 
 Aprendizados (não reintroduzir):
 - **Sazonalidade de dezembro** no hazard (spike ×1,3–4,3) + **rampa nos meses 1–3**; o Weibull
