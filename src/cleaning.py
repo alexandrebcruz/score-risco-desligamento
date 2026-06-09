@@ -79,7 +79,7 @@ RAIS_FIELD_TOKENS = {
     "faixa_remuneracao":   [["faixa", "rem", "media"]],
     "natureza_juridica":   [["natureza", "juridica"]],
     "intermitente":        [["intermitente"]],
-    "parcial":             [["trabalho", "parcial"]],
+    "parcial":             [["parcial"]],          # casa "Ind Trab Parcial" (2017-22) e "Ind Trabalho Parcial" (2023+)
     "qtd_dias_afastamento":[["dias", "afastamento"]],
     "simples":             [["simples"]],
     "faixa_horas":         [["faixa", "hora"]],
