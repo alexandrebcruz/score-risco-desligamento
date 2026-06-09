@@ -156,22 +156,28 @@ MAPA_UF_IBGE = {
 
 # Tabela oficial de Motivo de Desligamento da RAIS -> categoria unificada.
 # (Transferências 60-79 não são "perder o emprego" -> 'outros'; documentado.)
+# Mapa OFICIAL (validado contra RAIS_vinculos_layout2020.xls em data/dicts/).
+# O ALVO do projeto é só o 11 (dispensa sem justa causa); as demais categorias
+# servem para descrição/censura na sobrevivência. Códigos da aba "RAISD - layout":
 MAPA_MOTIVO_RAIS = {
-    0: "ativo",
-    10: "involuntario_cjc",   # rescisão COM justa causa por iniciativa do empregador
-    11: "involuntario_sjc",   # rescisão SEM justa causa por iniciativa do empregador
-    12: "fim_contrato",       # término do contrato de trabalho
-    20: "outros",             # rescisão indireta (justa causa do empregado) — raro
-    21: "pedido_demissao",    # rescisão sem justa causa por iniciativa do empregado
-    22: "fim_contrato",       # término antecipado de contrato a termo
-    30: "aposent_morte", 31: "aposent_morte", 32: "aposent_morte",
-    33: "aposent_morte", 34: "aposent_morte", 35: "aposent_morte",
-    40: "aposent_morte",      # falecimento
-    50: "outros",
-    60: "outros", 62: "outros", 63: "outros", 64: "outros",
-    70: "outros", 72: "outros", 73: "outros", 74: "outros", 75: "outros",
-    78: "outros", 79: "outros", 80: "outros", 81: "outros", 82: "outros",
-    90: "outros",
+    0:  "ativo",              # 0  NAO DESL ANO — vínculo não desligado no ano
+    10: "involuntario_cjc",   # 10 DEM COM JC — dispensa COM justa causa (empregador)
+    11: "involuntario_sjc",   # 11 DEM SEM JC — dispensa SEM justa causa (empregador) [ALVO]
+    12: "fim_contrato",       # 12 TERM CONTR — término do contrato de trabalho
+    20: "outros",             # 20 DESL COM JC — rescisão indireta (empregado) — raro
+    21: "pedido_demissao",    # 21 DESL SEM JC — pedido de demissão (empregado)
+    22: "outros",             # 22 POSS OUT CAR — posse em outro cargo inacumulável (servidor)
+    # 30–40: transferências, readaptação, cessão, redistribuição, mudança de regime
+    #        (movimentações, não desligamento efetivo do mercado) -> "outros"
+    30: "outros", 31: "outros", 32: "outros", 33: "outros", 34: "outros", 35: "outros",
+    40: "outros",             # 40 MUD. REGIME — mudança de regime trabalhista
+    # 50 reforma (militar) + 60–82 falecimentos e aposentadorias -> "aposent_morte"
+    50: "aposent_morte",      # 50 REFORMA (militar)
+    60: "aposent_morte", 62: "aposent_morte", 63: "aposent_morte", 64: "aposent_morte",
+    70: "aposent_morte", 71: "aposent_morte", 72: "aposent_morte", 73: "aposent_morte",
+    74: "aposent_morte", 75: "aposent_morte", 76: "aposent_morte", 78: "aposent_morte",
+    79: "aposent_morte", 80: "aposent_morte", 81: "aposent_morte", 82: "aposent_morte",
+    90: "outros",             # 90 DESL POR ACORDO — distrato (reforma trabalhista/2017)
 }
 
 
