@@ -411,7 +411,7 @@ HTML = r"""<!DOCTYPE html>
   /* slides de aplicação ao consignado */
   .txt2a{position:absolute;left:4%;top:18%;width:44%;}
   .txt2b{position:absolute;left:52%;top:18%;width:44%;}
-  .consigart{position:absolute;left:5%;top:60%;width:90%;height:35%;}
+  .consigart{position:absolute;left:5%;top:55%;width:90%;height:39%;}
   .consigart svg{width:100%;height:100%;}
   .aptwrap-l{position:absolute;left:2%;top:15.5%;width:31%;height:82%;overflow:auto;}
   .aptwrap-r{position:absolute;left:35%;top:15.5%;width:63%;height:82%;overflow:auto;}
