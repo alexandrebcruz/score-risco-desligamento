@@ -177,13 +177,13 @@ def bullets_html(items):
 B1_TXT = bullets_html([
     (False, "A ideia"),
     (True, "O modelo prevê QUEM/SE é desligado; a sobrevivência mede QUANDO."),
-    (True, "S(t) = probabilidade de continuar empregado após t meses."),
+    (True, "S(t) = probabilidade de seguir empregado após t meses de vínculo observado (desde a entrada)."),
     (False, "Dos microdados (RAIS)"),
-    (True, "Relógio = MOB (meses desde a ENTRADA na janela); evento = dispensa s/ justa causa."),
-    (True, "Censura: quem fica ativo (ou sai por outro motivo) não é 'evento'."),
+    (True, "Evento = dispensa s/ justa causa; censura = ativo ou saída por outro motivo."),
+    (True, "Relógio MOB: pré-existente entra em jan; admitido no ano entra no mês de admissão."),
     (False, "Kaplan–Meier"),
     (True, "S(t) = Π (nₘ−dₘ)/nₘ — usa a censura sem viés, mês a mês."),
-    (True, "RMST(12) = área sob S(t) = meses esperados de emprego no ano."),
+    (True, "RMST(12) = área sob S(t) = meses esperados de emprego nos 12 primeiros meses de vínculo."),
 ])
 B2_TXT = bullets_html([
     (False, "O problema"),
@@ -191,9 +191,9 @@ B2_TXT = bullets_html([
     (False, "Solução: forma paramétrica de Weibull"),
     (True, "S(t) = exp(−(t/λ)ᵖ);  hazard ∝ t^(p−1)  (p>1 sobe, p<1 cai)."),
     (True, "Ajuste por regressão pura: ln(−ln S) = p·ln t + ln α (OLS, 12 pts)."),
-    (True, "R² médio ≈ 0,99 — extrapola a curva até 36 meses (tracejado)."),
+    (True, "R² médio ≈ 0,99 — extrapola a curva até 36 MOB (tracejado)."),
     (False, "Ressalva"),
-    (True, "Ignora a sazonalidade de dezembro; projeção >12m é suposição."),
+    (True, "MOB dilui a sazonalidade de calendário entre coortes e mistura senioridade; projeção >12 é suposição."),
 ])
 
 def interactive_slide(kicker, title, txt, chart_id):
@@ -264,7 +264,7 @@ _INTRO_A = bullets_html([
     (False, "A ligação com o consignado"),
     (True, "No consignado, a parcela é descontada direto da folha de pagamento."),
     (True, "Se a pessoa perde o emprego, o desconto para → risco de não pagamento."),
-    (True, "S(t) = P(seguir empregado após t meses) = P(o desconto seguir ativo)."),
+    (True, "S(t) = P(seguir empregado t meses após a originação) = P(o desconto seguir ativo)."),
     (True, "Logo, o prazo deve caber na expectativa de permanência no emprego."),
 ])
 _INTRO_B = bullets_html([
@@ -321,7 +321,7 @@ def consig_tables_slide():
             '<span class="ttl">Prazo máximo e cobertura de parcelas por categoria</span></div>'
             '<div class="aptwrap-l"><div class="apt-h">Prazo máx. (meses) por confiança de seguir empregado</div>' + TERMO_TBL + '</div>'
             '<div class="aptwrap-r"><div class="apt-h">Cobertura esperada de parcelas (% pagas em folha) por prazo T</div>' + COV_TBL +
-            '<div class="apt-note">T em meses · &gt;12m extrapolado (Weibull) · verde = melhor cobertura</div></div></div>')
+            '<div class="apt-note">T = meses de vínculo (MOB) · &gt;12 extrapolado (Weibull) · verde = melhor cobertura</div></div></div>')
 
 # ---------- 4. monta todos os slides ----------
 slides = []
