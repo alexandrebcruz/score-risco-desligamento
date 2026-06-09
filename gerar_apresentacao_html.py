@@ -312,8 +312,10 @@ CONSIG_ART = '''<svg viewBox="0 0 980 200" preserveAspectRatio="xMidYMid meet">
 def consig_intro_slide():
     return ('<div class="slide cust"><div class="hb"><span class="kick">APLICAÇÃO · CRÉDITO CONSIGNADO</span>'
             '<span class="ttl">Usando a sobrevivência para definir o prazo do consignado</span></div>'
-            '<div class="txt2a">' + _INTRO_A + '</div><div class="txt2b">' + _INTRO_B + '</div>'
-            '<div class="consigart">' + CONSIG_ART + '</div></div>')
+            '<div class="consigbody">'
+            '<div class="consigcols"><div>' + _INTRO_A + '</div><div>' + _INTRO_B + '</div></div>'
+            '<div class="consigart">' + CONSIG_ART + '</div>'
+            '</div></div>')
 def consig_tables_slide():
     return ('<div class="slide cust"><div class="hb"><span class="kick">APLICAÇÃO · CRÉDITO CONSIGNADO</span>'
             '<span class="ttl">Prazo máximo e cobertura de parcelas por categoria</span></div>'
@@ -409,10 +411,13 @@ HTML = r"""<!DOCTYPE html>
   .impwrap svg{width:100%;height:100%;}
   .imp-bar{cursor:pointer;}
   /* slides de aplicação ao consignado */
-  .txt2a{position:absolute;left:4%;top:18%;width:44%;}
-  .txt2b{position:absolute;left:52%;top:18%;width:44%;}
-  .consigart{position:absolute;left:5%;top:55%;width:90%;height:39%;}
-  .consigart svg{width:100%;height:100%;}
+  /* corpo do slide centralizado verticalmente na área de conteúdo */
+  .consigbody{position:absolute;left:4%;right:4%;top:14%;bottom:3%;display:flex;flex-direction:column;
+              justify-content:center;gap:4.5%;}
+  .consigcols{display:flex;gap:5%;align-items:flex-start;}
+  .consigcols > div{flex:1 1 0;}
+  .consigart{width:100%;}
+  .consigart svg{display:block;width:88%;height:auto;margin:0 auto;}
   .aptwrap-l{position:absolute;left:2%;top:15.5%;width:31%;height:82%;overflow:auto;}
   .aptwrap-r{position:absolute;left:35%;top:15.5%;width:63%;height:82%;overflow:auto;}
   .apt-h{font-weight:700;font-size:calc(var(--u)*0.92);color:var(--navy);margin-bottom:.35em;line-height:1.2;}

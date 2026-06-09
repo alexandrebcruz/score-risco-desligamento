@@ -361,14 +361,25 @@ def grupo_slide(nome, cats, cor, n, pers=None, persona_txt=None, inds_spec=None,
     for i, t in enumerate(persona_txt[nome][1]):
         fig.text(0.05, 0.70 - i*0.066, "▸ " + t, fontsize=12.4, color=INK,
                  wrap=True)
-    # indicadores (barras horizontais)
-    ax = fig.add_axes([0.135, 0.10, 0.355, 0.34])
-    inds = [(lab, wavg(coln)) for lab, coln in inds_spec]
-    labels = [a for a, _ in inds][::-1]; vals = [b for _, b in inds][::-1]
-    ax.barh(labels, vals, color=cor, alpha=.85)
-    for y, v in enumerate(vals): ax.text(min(v+1.5, 96), y, f"{v:.0f}%", va="center", fontsize=9)
-    ax.set_xlim(0, 100); ax.set_title("Perfil do grupo (médias ponderadas)", fontsize=11, weight="bold")
-    ax.tick_params(labelsize=9.5); ax.grid(axis="x", alpha=.25)
+    # indicadores como NOTAS: "{%} {característica} (lift {x}× vs. média geral)"
+    wn_all = pers["n"].values
+    def wavg_all(c): return float(np.average(pers[c], weights=wn_all))   # base = todas as categorias
+    notas = []
+    for lab, coln in inds_spec:
+        v = wavg(coln); base = wavg_all(coln)
+        notas.append((lab, v, (v / base if base > 0 else 0.0)))
+    notas.sort(key=lambda t: t[2], reverse=True)                        # mais distintivo primeiro
+    ax = fig.add_axes([0.05, 0.05, 0.47, 0.42]); ax.axis("off"); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    ax.text(0.0, 0.95, "Características do grupo  (% no grupo · lift vs. média geral)",
+            fontsize=11, weight="bold", color=INK)
+    for i, (lab, v, lift) in enumerate(notas):
+        y = 0.80 - i * 0.105                                   # linhas mais próximas
+        up = lift >= 1.0
+        lc = "#1a9850" if up else "#d73027"                    # verde acima de 1, vermelho abaixo
+        arw = "▲" if up else "▼"
+        ax.text(0.02, y, f"{v:.0f}%", fontsize=15, weight="bold", color=cor, va="center")
+        ax.text(0.18, y, lab, fontsize=12, color=INK, va="center")
+        ax.text(0.99, y, f"{arw} lift {lift:.1f}×", fontsize=11.5, weight="bold", color=lc, va="center", ha="right")
     # mini-cards numéricos
     ax2 = fig.add_axes([0.54, 0.10, 0.43, 0.34]); ax2.axis("off"); ax2.set_xlim(0,1); ax2.set_ylim(0,1)
     cards = [("Risco médio do grupo", f"{taxa:.1f}%"), ("Idade média", f"{wavg('idade_media'):.0f} anos"),
