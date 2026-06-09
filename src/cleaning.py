@@ -216,7 +216,7 @@ def _rais_bruto_from_chunk(chunk: pd.DataFrame, ano: int,
 
 
 def iter_rais_clean_chunks(path, ano: int, ufs_subset: list[str] | None = None,
-                           chunksize: int = 1_000_000):
+                           chunksize: int = 1_000_000, regiao: str | None = None):
     """Itera um arquivo de vínculos RAIS (.COMT/.txt) em chunks JÁ LIMPOS.
 
     Detecta separador e resolve nomes de coluna por tokens (robusto entre anos).
@@ -228,9 +228,13 @@ def iter_rais_clean_chunks(path, ano: int, ufs_subset: list[str] | None = None,
     ren = _resolve_rais_columns(header)          # nome_real -> nome_logico
     reader = pd.read_csv(path, sep=sep, encoding="latin-1", dtype=str,
                          usecols=list(ren.keys()), chunksize=chunksize)
+    offset = 0
     for chunk in reader:
-        bruto = _rais_bruto_from_chunk(chunk.rename(columns=ren), ano, ufs_subset)
-        yield clean_rais_real(bruto)
+        chunk = chunk.rename(columns=ren)
+        chunk["__row"] = range(offset, offset + len(chunk))   # nº da linha no arquivo (0-based)
+        offset += len(chunk)
+        bruto = _rais_bruto_from_chunk(chunk, ano, ufs_subset)
+        yield clean_rais_real(bruto, regiao=regiao)
 
 
 def read_rais_comt(path, ano: int, chunksize: int = 500_000,
@@ -290,7 +294,7 @@ def normalize_short_codes(df: pd.DataFrame,
     return df
 
 
-def clean_rais_real(df_bruto: pd.DataFrame) -> pd.DataFrame:
+def clean_rais_real(df_bruto: pd.DataFrame, regiao: str | None = None) -> pd.DataFrame:
     """Padroniza o schema bruto da RAIS real para o schema canônico do projeto.
 
     Reutiliza a mesma estrutura de `clean_rais`, porém com o mapa de motivos
@@ -298,7 +302,13 @@ def clean_rais_real(df_bruto: pd.DataFrame) -> pd.DataFrame:
     """
     df = df_bruto.copy()
     separado = df["vinculo_ativo_3112"].astype(int) == 0
+    # ID posicional ÚNICO: ano_regiao_nº-da-linha-no-arquivo (0-based, ordem do RAW).
+    # __row vem de iter_rais_clean_chunks; fallback p/ chamadas avulsas sem __row.
+    _row = (df["__row"].astype("int64") if "__row" in df.columns
+            else pd.Series(range(len(df)), index=df.index)).astype(str)
+    _reg = str(regiao) if regiao is not None else "NA"
     out = pd.DataFrame({
+        "id_linha": df["ano"].astype(str) + "_" + _reg + "_" + _row,
         "ano": df["ano"].astype(int),
         "fonte": "RAIS",
         # zfill já no interim p/ padrão único entre anos (5->6 díg. etc.); idempotente downstream

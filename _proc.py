@@ -1,6 +1,6 @@
 """Reprocessa as partições RAIS -> interim (com as colunas novas). Idempotente,
 escrita atômica (.part -> rename), re-extrai os .7z do cache."""
-import sys, time
+import sys, time, re
 from pathlib import Path
 ROOT = Path(__file__).parent; sys.path.insert(0, str(ROOT))
 import pyarrow as pa, pyarrow.parquet as pq
@@ -33,7 +33,8 @@ for ano in cfg["anos"]:
         extr = io_utils.extract_7z(z, raw / "RAIS" / str(ano))
         arq = next(p for p in extr if p.suffix.upper() in (".COMT", ".TXT"))
         tmp = dest.with_suffix(".parquet.part")
-        n = escreve(tmp, cleaning.iter_rais_clean_chunks(arq, ano, ufs))
+        reg = re.sub(rf"{ano}$", "", regiao) or regiao        # "AC2016"->"AC"; região fica igual
+        n = escreve(tmp, cleaning.iter_rais_clean_chunks(arq, ano, ufs, regiao=reg))
         tmp.rename(dest); arq.unlink()
         print(f"{ano}/{regiao}: {n:,} ({time.time()-t0:.0f}s)", flush=True)
 print("OK todas as partições", flush=True)

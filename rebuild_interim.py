@@ -83,8 +83,9 @@ for ano in ANOS:
         extr = io_utils.extract_7z(Path(z), rdir)
         arq = next(p for p in extr if p.suffix.upper() in (".COMT", ".TXT"))
         tmp = Path(str(dest) + f".{os.getpid()}.part")        # tmp único por processo
-        log(f"  {ano}/{part}: lendo+limpando {arq.name} ...")
-        n = escreve(tmp, cleaning.iter_rais_clean_chunks(str(arq), ano, None))
+        reg = re.sub(rf"{ano}$", "", part) or part            # "AC2016"->"AC"; "NORTE" fica igual
+        log(f"  {ano}/{part}: lendo+limpando {arq.name} (regiao={reg}) ...")
+        n = escreve(tmp, cleaning.iter_rais_clean_chunks(str(arq), ano, None, regiao=reg))
         os.replace(tmp, dest)
         arq.unlink()
         log(f"  {ano}/{part}: {n:,} vínculos -> {dest.name}")
