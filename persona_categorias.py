@@ -59,8 +59,13 @@ def map_rem(v):
     return "rem_ignorada"
 rem = share("faixa_remuneracao", map_rem)
 
-# --- escolaridade ---
-esc = share("escolaridade", lambda v: str(v))
+# --- escolaridade: vem CRUA do interim (código 1..11) -> agrupa aqui p/ leitura ---
+def map_esc(v):
+    return {"1":"ate_fund_incompleto","2":"ate_fund_incompleto","3":"ate_fund_incompleto",
+            "4":"ate_fund_incompleto","5":"fundamental","6":"medio_incompleto",
+            "7":"medio_completo","8":"superior_incompleto","9":"superior",
+            "10":"superior","11":"superior"}.get(str(v),"nao_informado")
+esc = share("escolaridade", map_esc)
 
 # --- setor (1º dígito natureza jurídica) ---
 setor = share("natureza_setor", lambda v: {"1":"publico","2":"privado","3":"sem_fins"}.get(str(v),"outro_setor"))

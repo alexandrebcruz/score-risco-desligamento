@@ -305,7 +305,7 @@ def clean_rais_real(df_bruto: pd.DataFrame) -> pd.DataFrame:
         "cnae": df["cnae"].astype(str).str.strip(),
         "uf": df["uf"].astype(str).str.upper().str.strip(),
         "idade": pd.to_numeric(df["idade"], errors="coerce"),
-        "escolaridade": df["grau_instrucao"].map(MAPA_ESCOLARIDADE).fillna("nao_informado"),
+        "escolaridade": _raw_grau_instrucao(df["grau_instrucao"]),   # código CRU (1..11), sem agrupar
         "tamanho_estab": pd.to_numeric(df["tamanho_estab"], errors="coerce"),
         "tempo_vinculo_meses": pd.to_numeric(df["tempo_emprego_meses"], errors="coerce"),
         "vinculo_ativo": df["vinculo_ativo_3112"].astype(int),
@@ -313,7 +313,9 @@ def clean_rais_real(df_bruto: pd.DataFrame) -> pd.DataFrame:
         # 0 = vínculo admitido em ano anterior (vigente no início do ano); 1-12 = mês de admissão no ano
         "mes_admissao": (pd.to_numeric(df["mes_admissao"], errors="coerce").fillna(0).astype(int)
                          if "mes_admissao" in df.columns else 0),
-        "motivo_unificado": df["motivo_desligamento"].map(MAPA_MOTIVO_RAIS).fillna("outros"),
+        # código CRU do motivo de desligamento (sem agrupar); o ALVO é derivado dele:
+        "motivo_desligamento": pd.to_numeric(df["motivo_desligamento"], errors="coerce").fillna(0).astype(int),
+        "motivo_unificado": df["motivo_desligamento"].map(MAPA_MOTIVO_RAIS).fillna("outros"),  # ALVO/censura
         "separado": separado,
         # --- variáveis adicionais (enriquecimento) ---
         "tipo_vinculo": df["tipo_vinculo"].astype(str).str.strip(),
@@ -343,6 +345,13 @@ def _map_escolaridade(grau: pd.Series) -> pd.Series:
     return grau.map(MAPA_ESCOLARIDADE).fillna("nao_informado")
 
 
+def _raw_grau_instrucao(grau: pd.Series) -> pd.Series:
+    """Código CRU de grau de instrução (1..11; -1=ignorado) como string, SEM agrupar.
+    pd.to_numeric remove zero-padding eventual ('07'->'7'); preserva só o RAW."""
+    s = pd.to_numeric(grau, errors="coerce").astype("Int64").astype("string")
+    return s.fillna("nao_informado").astype(object)   # dtype object (igual às demais categóricas)
+
+
 def clean_rais(df_raw: pd.DataFrame) -> pd.DataFrame:
     """Padroniza um lote bruto de vínculos RAIS para o schema canônico."""
     df = df_raw.copy()
@@ -354,7 +363,7 @@ def clean_rais(df_raw: pd.DataFrame) -> pd.DataFrame:
         "cnae": df["cnae"].astype(str).str.strip(),
         "uf": df["uf"].astype(str).str.upper().str.strip(),
         "idade": pd.to_numeric(df["idade"], errors="coerce"),
-        "escolaridade": _map_escolaridade(df["grau_instrucao"]),
+        "escolaridade": _raw_grau_instrucao(df["grau_instrucao"]),   # código CRU, sem agrupar
         "tamanho_estab": pd.to_numeric(df["tamanho_estab"], errors="coerce"),
         "tempo_vinculo_meses": pd.to_numeric(df["tempo_emprego_meses"], errors="coerce"),
         "vinculo_ativo": df["vinculo_ativo_3112"].astype(int),
@@ -386,7 +395,7 @@ def clean_caged(df_raw: pd.DataFrame) -> pd.DataFrame:
         "cnae": df["cnae"].astype(str).str.strip(),
         "uf": df["uf"].astype(str).str.upper().str.strip(),
         "idade": pd.to_numeric(df["idade"], errors="coerce"),
-        "escolaridade": _map_escolaridade(df["grau_instrucao"]),
+        "escolaridade": _raw_grau_instrucao(df["grau_instrucao"]),   # código CRU, sem agrupar
         "tamanho_estab": pd.to_numeric(df["tamanho_estab"], errors="coerce"),
         "tempo_vinculo_meses": np.nan,
         "saldo": df["saldomovimentacao"].astype(int),
