@@ -418,8 +418,8 @@ HTML = r"""<!DOCTYPE html>
   .consigcols > div{flex:1 1 0;}
   .consigart{width:100%;}
   .consigart svg{display:block;width:88%;height:auto;margin:0 auto;}
-  .aptwrap-l{position:absolute;left:2%;top:15.5%;width:31%;height:82%;overflow:auto;}
-  .aptwrap-r{position:absolute;left:35%;top:15.5%;width:63%;height:82%;overflow:auto;}
+  .aptwrap-l{position:absolute;left:2%;top:15.5%;width:31%;height:82%;overflow:auto;display:flex;flex-direction:column;justify-content:center;}
+  .aptwrap-r{position:absolute;left:35%;top:15.5%;width:63%;height:82%;overflow:auto;display:flex;flex-direction:column;justify-content:center;}
   .apt-h{font-weight:700;font-size:calc(var(--u)*0.92);color:var(--navy);margin-bottom:.35em;line-height:1.2;}
   .apt-note{font-size:calc(var(--u)*0.8);color:var(--grey);margin-top:.35em;}
   .aptbl{border-collapse:collapse;width:100%;font-size:calc(var(--u)*0.86);font-variant-numeric:tabular-nums;}
