@@ -1,0 +1,30 @@
+codigo,rotulo,descricao
+10,DEM COM JC,10 - Rescisão com justa causa por iniciativa do empregador ou servidor demitido
+11,DEM SEM JC,11 - Rescisão sem justa causa por iniciativa do empregador.
+12,TERM CONTR,12 - Término do contrato de trabalho.
+20,DESL COM JC,20 - Rescisão com justa causa por iniciativa do empregado (rescisão indireta).
+21,DESL SEM JC,21 - Rescisão sem justa causa por iniciativa do empregado ou exoneração a pedido
+22,POSS OUT CAR,22 - Posse em outro cargo inacumulável (específico para servidor público)
+30,TRANS C/ONUS,"30 - Transferência de empregado entre estabelecimentos da mesma empresa ou para outra empresa, com ônus para a cedente"
+31,TRANS S/ONUS,"31 - Transferência de empregado entre estabelecimentos da mesma empresa ou para outra empresa, sem ônus para a cedente"
+32,READAP/REDIS,32 - Readaptação ou redistribuição (específico para servidor publico)
+33,CESSAO,33 - Cessão
+34,REDISTRIBUIÇÃO,34 - Redistribuição (específico para servidor publico)
+40,MUD. REGIME,40 - Mudança de regime trabalhista.
+50,REFORMA,50 - Reforma de militar para a reserva remunerada.
+60,FALECIMENTO,60 - Falecimento.
+62,FALEC AC TRB,62 - Falecimento decorrente de acidente do trabalho típico (que ocorre no exercício de atividades profissionais a serviço da empresa)
+63,FALEC AC TIP,63 - Falecimento decorrente de acidente do trabalho de trajeto (ocorrido no trajeto residência-trabalho-residência)
+64,FALEC D PROF,64 - Falecimento decorrente de doença profissional.
+70,APOS TS CRES,"70 - Aposentadoria por tempo de serviço, com rescisão contratual."
+71,APOS TS SRES,"71 - Aposentadoria por tempo de serviço, sem rescisão contratual."
+72,APOS ID CRES,"72 - Aposentadoria por idade, com rescisão contratual."
+73,APOS IN ACID,"73 - Aposentadoria por invalidez, decorrente de acidente do trabalho."
+74,APOS IN DOEN,"74 - Aposentadoria por invalidez, decorrente de doença profissional."
+75,APOS COMPULS,75 - Aposentadoria compulsória.
+76,APOS IN OUTR,"76 - Aposentadoria por invalidez, exceto a decorrente de doença profissional ou acidente do trabalho."
+78,APOS ID SRES,"78 - Aposentadoria por idade, sem rescisão contratual."
+79,APOS ESP CRE,"79 - Aposentadoria especial, com rescisão contratual."
+80,APOS ESP SRE,"80 - Aposentadoria especial, sem rescisão contratual."
+90,DESL POR ACORDO,90 - Desligamento por Acordo Empregado e Empregador
+0,NAO DESL ANO,00 - Não desligado no ano

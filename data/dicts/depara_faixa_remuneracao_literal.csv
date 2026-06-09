@@ -1,0 +1,13 @@
+codigo,faixa_sm
+0,"Até 0,50 salários mínimos"
+1,"0,51 a 1,00 salários mínimos"
+2,"1,01 a 1,50 salários mínimos"
+3,"1,51 a 2,00 salários mínimos"
+4,"2,01 a 3,00 salários mínimos"
+5,"3,01 a 4,00 salários mínimos"
+6,"4,01 a 5,00 salários mínimos"
+7,"5,01 a 7,00 salários mínimos"
+8,"7,01 a 10,00 salários mínimos"
+9,"10,01 a 15,00 salários mínimos"
+10,"15,01 a 20,00 salários mínimos"
+11,"Mais de 20,00 salários mínimos"
