@@ -301,8 +301,9 @@ def clean_rais_real(df_bruto: pd.DataFrame) -> pd.DataFrame:
     out = pd.DataFrame({
         "ano": df["ano"].astype(int),
         "fonte": "RAIS",
-        "cbo": df["cbo"].astype(str).str.strip(),
-        "cnae": df["cnae"].astype(str).str.strip(),
+        # zfill já no interim p/ padrão único entre anos (5->6 díg. etc.); idempotente downstream
+        "cbo": df["cbo"].astype(str).str.strip().str.zfill(6),
+        "cnae": df["cnae"].astype(str).str.strip().str.zfill(7),
         "uf": df["uf"].astype(str).str.upper().str.strip(),
         "idade": pd.to_numeric(df["idade"], errors="coerce"),
         "escolaridade": _raw_grau_instrucao(df["grau_instrucao"]),   # código CRU (1..11), sem agrupar
@@ -359,8 +360,9 @@ def clean_rais(df_raw: pd.DataFrame) -> pd.DataFrame:
     out = pd.DataFrame({
         "ano": df["ano"].astype(int),
         "fonte": "RAIS",
-        "cbo": df["cbo"].astype(str).str.strip(),
-        "cnae": df["cnae"].astype(str).str.strip(),
+        # zfill já no interim p/ padrão único entre anos (5->6 díg. etc.); idempotente downstream
+        "cbo": df["cbo"].astype(str).str.strip().str.zfill(6),
+        "cnae": df["cnae"].astype(str).str.strip().str.zfill(7),
         "uf": df["uf"].astype(str).str.upper().str.strip(),
         "idade": pd.to_numeric(df["idade"], errors="coerce"),
         "escolaridade": _raw_grau_instrucao(df["grau_instrucao"]),   # código CRU, sem agrupar

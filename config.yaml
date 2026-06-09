@@ -4,9 +4,9 @@
 # Todos os notebooks e módulos em src/ leem deste arquivo (via src/config.py).
 # Ajuste aqui anos, caminhos, thresholds e faixas de binning.
 
-# Período histórico nacional: 2016-2023 (8 anos). 2016/2017 vêm por UF no FTP;
+# Período histórico nacional: 2016-2025 (10 anos). 2016/2017 vêm por UF no FTP;
 # 2018+ por região. O parser lida com ambos. Anos atípicos: 2020-2021 (pandemia).
-anos: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023]
+anos: [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
 
 # Anos considerados atípicos (choque pandêmico). Se `excluir_anos_atipicos: true`,
 # eles são removidos do cálculo das taxas estruturais (mantidos só para comparação).
