@@ -1,0 +1,14 @@
+codigo_cru,categoria_unificada
+0,ativo
+11,involuntario_sjc
+12,involuntario_cjc
+20,pedido_demissao
+21,pedido_demissao
+22,pedido_demissao
+30,fim_contrato
+31,fim_contrato
+32,fim_contrato
+40,aposent_morte
+60,aposent_morte
+62,aposent_morte
+90,outros

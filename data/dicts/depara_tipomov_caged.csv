@@ -1,0 +1,14 @@
+tipo_movimentacao,categoria_unificada
+31,involuntario_sjc
+32,involuntario_cjc
+33,outros
+40,pedido_demissao
+43,fim_contrato
+45,fim_contrato
+50,aposent_morte
+60,aposent_morte
+70,outros
+80,outros
+90,outros
+98,outros
+99,outros
