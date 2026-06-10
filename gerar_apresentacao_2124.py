@@ -698,24 +698,46 @@ def taxa_conceitos():
         (True, "Resolve-se i (a taxa mínima) numericamente para cada categoria e prazo;"),
         (None, "anual = (1+i)¹² − 1.  É um PISO de quebra-zero — some custo de funding + margem."),
     ], fs=12.1, dy=0.0575)
-    # diagrama: recebido esperado vs principal
-    ax = fig.add_axes([0.63, 0.13, 0.33, 0.60]); ax.set_xlim(0, 1); ax.set_ylim(0, 1.35)
-    ax.axhline(1.0, ls="--", color="#444", lw=1.2); ax.text(0.02, 1.04, "principal (P)", fontsize=9, color="#444")
+    # ---- diagrama: recebido esperado ÷ principal, à MESMA taxa (1%/mês, T=24) ----
     import numpy as _np
+    ax = fig.add_axes([0.635, 0.155, 0.335, 0.545])
     cats_ex = [2, 6, 10, 13]; xs = _np.arange(len(cats_ex))
-    # recebido com taxa baixa (1%/mês, T=24) -> mostra quem recupera e quem não
-    i_demo = 0.01; T = 24
+    i_demo, T = 0.01, 24
     A = i_demo / (1 - (1 + i_demo) ** (-T))
-    vals = [A * T * (float(COB.loc[COB.categoria == c, "T_24"].iloc[0]) / 100.0) for c in cats_ex]
-    cores = [gcolor(c) for c in cats_ex]
-    ax.bar(xs, vals, color=cores, width=0.6)
+    cobs = [float(COB.loc[COB.categoria == c, "T_24"].iloc[0]) for c in cats_ex]
+    vals = [A * T * (cb / 100.0) for cb in cobs]
+    YMAX = 1.5
+    ax.set_xlim(-0.65, len(cats_ex) - 0.35); ax.set_ylim(0, YMAX)
+    # zona de recuperação (acima de P) levemente esverdeada; zona de perda avermelhada
+    ax.axhspan(1.0, YMAX, color="#1a9850", alpha=0.06, zorder=0)
+    ax.axhspan(0.0, 1.0, color="#d73027", alpha=0.045, zorder=0)
+    for gy in (0.5, 1.5):
+        ax.axhline(gy, color="#e6e6e6", lw=0.8, zorder=1)
+    # barras com leve sombra + topo arredondado simulado por edge
     for x, v, c in zip(xs, vals, cats_ex):
-        ax.text(x, v + 0.03, f"{v:.2f}", ha="center", fontsize=8.5, color=INK)
-    ax.set_xticks(xs); ax.set_xticklabels([f"cat {c}" for c in cats_ex], fontsize=8.5)
-    ax.set_ylabel("recebido / principal", fontsize=9)
-    ax.set_title("Mesma taxa (1%/mês, T=24): só\nbaixo risco recupera P", fontsize=9.5, weight="bold")
-    ax.set_yticks([0, 0.5, 1.0]); ax.tick_params(labelsize=8)
-    for sp in ("top", "right"): ax.spines[sp].set_visible(False)
+        ax.bar(x, v, width=0.62, color=gcolor(c), edgecolor="white", linewidth=1.2, zorder=3)
+        ax.bar(x + 0.045, v - 0.012, width=0.62, color="black", alpha=0.06, zorder=2)  # sombra
+    # linha do principal — destaque
+    ax.axhline(1.0, ls=(0, (5, 2)), color=NAVY, lw=1.8, zorder=4)
+    ax.text(len(cats_ex) - 0.45, 1.045, "principal (P)", fontsize=8.5, color=NAVY,
+            ha="right", weight="bold", zorder=5)
+    # rótulos: × P + selo recupera/não recupera
+    for x, v in zip(xs, vals):
+        ok = v >= 1.0
+        ax.annotate(f"{v:.2f}× P", (x, v), xytext=(0, 7), textcoords="offset points",
+                    ha="center", fontsize=9, weight="bold", color=(INK if ok else "#b3271f"))
+        ax.scatter(x, 0.075, s=130, marker="o", color=("#1a9850" if ok else "#d73027"), zorder=5)
+        ax.text(x, 0.075, "✓" if ok else "✗", ha="center", va="center", fontsize=9,
+                color="white", weight="bold", zorder=6)
+    ax.set_xticks(xs)
+    ax.set_xticklabels([f"cat {c}\ncob. {cb:.0f}%" for c, cb in zip(cats_ex, cobs)], fontsize=8.2)
+    ax.set_ylabel("valor recebido ÷ principal", fontsize=9)
+    ax.set_yticks([0, 0.5, 1.0, 1.5]); ax.set_yticklabels(["0", "0,5", "1,0", "1,5"])
+    ax.tick_params(labelsize=8, length=0)
+    ax.set_title("À MESMA taxa (1%/mês, 24 m): só o\nbaixo risco recupera o emprestado",
+                 fontsize=9.8, weight="bold", color=INK, pad=8)
+    for sp in ("top", "right", "left"): ax.spines[sp].set_visible(False)
+    ax.spines["bottom"].set_color("#c8d0db")
     fig.text(0.05, 0.055, "Hipótese conservadora: ZERO recuperação do saldo após o desligamento "
              "(FGTS/rescisão/portabilidade reduziriam o piso). Valores nominais.", fontsize=9.5, color=GREY)
     footer(fig, "C3"); pages.append(fig)
