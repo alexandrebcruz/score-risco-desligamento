@@ -141,6 +141,21 @@ FEATINFO = {
 }
 FEATINFO_JSON = json.dumps(FEATINFO, ensure_ascii=False)
 
+# ranking dos principais fatores (top 5) p/ a coluna esquerda do slide de features
+_imp_sorted = _imp.sort_values("imp_ensemble", ascending=False).reset_index(drop=True)
+_impmax = float(_imp_sorted["imp_ensemble"].iloc[0])
+def _feattop_html(n=5):
+    out = []
+    for i, r in _imp_sorted.head(n).iterrows():
+        nome = FEATINFO.get(r.feature, {}).get("curto", r.feature)
+        v = float(r.imp_ensemble); w = max(4, v / _impmax * 100)
+        out.append('<div class="ftrow"><span class="ftk">%d</span>'
+                   '<span class="ftn">%s</span>'
+                   '<span class="ftbar"><span style="width:%.0f%%"></span></span>'
+                   '<span class="ftv">%s%%</span></div>' % (i + 1, nome, w, f"{v:.1f}".replace(".", ",")))
+    return "\n".join(out)
+FEATTOP_HTML = _feattop_html()
+
 # fonte DejaVu embutida
 _TTF = os.path.join(matplotlib.get_data_path(), "fonts", "ttf")
 def _face(fname, weight):
@@ -189,12 +204,23 @@ def interactive_slide(kicker, title, txt, chart_id):
 </div>'''
 
 def features_slide():
-    return """<div class="slide cust">
-  <div class="hb"><span class="kick">DESENVOLVIMENTO · FEATURES</span><span class="ttl">As 21 variáveis do modelo — importância e significado</span></div>
-  <div class="featinfo" id="featinfo"><div class="fi-h">Importância das variáveis</div><div class="fi-d">Clique numa barra ao lado para ver o que é a variável e exemplos de valores.</div></div>
-  <div class="impwrap"><svg id="svg-imp" viewBox="0 0 560 470" preserveAspectRatio="xMidYMid meet"></svg></div>
-  <div class="leaknote"><b>Base leak-free:</b> tempo de vínculo medido na ENTRADA da janela · afastamento em dias POR MÊS de exposição · causa de afastamento removida · ordinais (escolaridade, porte, faixas) como numéricas (99 → -1).</div>
-</div>"""
+    return ('<div class="slide cust">'
+            '<div class="hb"><span class="kick">DESENVOLVIMENTO · FEATURES</span>'
+            '<span class="ttl">As 21 variáveis do modelo — importância e significado</span></div>'
+            '<div class="featleft">'
+            '<div class="fl-block"><div class="fl-h">Como ler</div>'
+            '<div class="fl-d">A importância mede quanto cada variável ajuda o modelo a separar '
+            'quem é desligado de quem permanece. <b>Clique numa barra</b> para ver o significado e exemplos.</div></div>'
+            '<div class="fl-block"><div class="fl-h">Principais fatores de risco</div>'
+            '<div class="fttable">' + FEATTOP_HTML + '</div></div>'
+            '<div class="fl-leak"><b>Base leak-free:</b> tempo de vínculo medido na ENTRADA da janela · '
+            'afastamento em dias POR MÊS de exposição · causa de afastamento removida · '
+            'ordinais (escolaridade, porte, faixas) tratadas como numéricas.</div>'
+            '</div>'
+            '<div class="impwrap"><svg id="svg-imp" viewBox="0 0 560 470" preserveAspectRatio="xMidYMid meet"></svg></div>'
+            '<div class="featinfo" id="featinfo"><div class="fi-h">Significado da variável</div>'
+            '<div class="fi-d">Clique numa barra do gráfico para ver o que é a variável e exemplos de valores.</div></div>'
+            '</div>')
 
 def box_slide():
     return '''<div class="slide cust">
@@ -383,18 +409,31 @@ HTML = r"""<!DOCTYPE html>
   .boxtable tr.hl td.ct{filter:brightness(.85);}
   .boxhint{position:absolute;left:2%;bottom:2.5%;color:var(--grey);font-size:calc(var(--u)*0.9);}
   /* slide de features: importância clicável + box de detalhes (layout do deck anterior) */
-  .featinfo{position:absolute;left:2.5%;top:18%;width:34%;max-height:62%;overflow:auto;z-index:6;
+  /* box descritivo da variável: canto INFERIOR DIREITO (sobre as barras), como no deck anterior */
+  .featinfo{position:absolute;right:2.5%;bottom:4.5%;width:34%;max-height:56%;overflow:auto;z-index:6;
             background:rgba(255,255,255,.97);border:1px solid #cdd5df;border-radius:8px;
-            padding:calc(var(--u)*0.9);box-shadow:0 3px 14px rgba(0,0,0,.20);}
-  .featinfo .fi-h{font-weight:700;font-size:calc(var(--u)*1.25);color:var(--navy);margin-bottom:.35em;}
-  .featinfo .fi-d{font-size:calc(var(--u)*1.02);color:var(--ink);line-height:1.45;}
-  .featinfo .fi-ex{margin-top:.5em;font-size:calc(var(--u)*0.98);padding-left:1.2em;}
-  .featinfo .fi-ex li{margin:.18em 0;color:#33404f;}
-  .impwrap{position:absolute;left:40%;top:15.5%;width:58%;height:80%;}
+            padding:calc(var(--u)*0.9);box-shadow:0 4px 16px rgba(0,0,0,.22);}
+  .featinfo .fi-h{font-weight:700;font-size:calc(var(--u)*1.22);color:var(--navy);margin-bottom:.3em;}
+  .featinfo .fi-d{font-size:calc(var(--u)*1.0);color:var(--ink);line-height:1.4;}
+  .featinfo .fi-ex{margin-top:.45em;font-size:calc(var(--u)*0.96);padding-left:1.2em;}
+  .featinfo .fi-ex li{margin:.16em 0;color:#33404f;}
+  /* coluna esquerda: como ler + ranking dos top fatores + nota leak-free */
+  .featleft{position:absolute;left:2.5%;top:16.5%;width:33.5%;bottom:3.5%;display:flex;flex-direction:column;}
+  .featleft .fl-block{margin-bottom:calc(var(--u)*1.5);}
+  .featleft .fl-h{font-weight:700;font-size:calc(var(--u)*1.25);color:var(--navy);margin-bottom:.35em;}
+  .featleft .fl-d{font-size:calc(var(--u)*1.05);color:var(--ink);line-height:1.45;}
+  .fttable .ftrow{display:flex;align-items:center;gap:calc(var(--u)*0.5);margin:calc(var(--u)*0.42) 0;}
+  .ftk{flex:0 0 auto;width:calc(var(--u)*1.7);height:calc(var(--u)*1.7);border-radius:5px;background:var(--navy);
+       color:#fff;font-weight:700;font-size:calc(var(--u)*1.0);display:flex;align-items:center;justify-content:center;}
+  .ftn{flex:0 0 38%;font-size:calc(var(--u)*1.02);color:var(--ink);}
+  .ftbar{flex:1 1 auto;height:calc(var(--u)*0.85);background:#e6edf5;border-radius:4px;overflow:hidden;}
+  .ftbar > span{display:block;height:100%;background:#2e9e5b;border-radius:4px;}
+  .ftv{flex:0 0 auto;width:calc(var(--u)*3.2);text-align:right;font-weight:700;font-size:calc(var(--u)*1.0);
+       color:var(--navy);font-variant-numeric:tabular-nums;}
+  .fl-leak{margin-top:auto;font-size:calc(var(--u)*0.86);color:var(--grey);line-height:1.4;}
+  .impwrap{position:absolute;left:38%;top:15%;width:60%;height:82%;}
   .impwrap svg{width:100%;height:100%;}
   .imp-bar{cursor:pointer;}
-  .leaknote{position:absolute;left:2.5%;bottom:3%;width:34%;font-size:calc(var(--u)*0.85);
-            color:var(--grey);line-height:1.45;}
   .aptwrap-l{position:absolute;left:2%;top:15.5%;width:31%;height:80%;overflow:auto;display:flex;flex-direction:column;justify-content:center;}
   .aptwrap-r{position:absolute;left:35%;top:15.5%;width:63%;height:80%;overflow:auto;display:flex;flex-direction:column;justify-content:center;}
   .apt-h{font-weight:700;font-size:calc(var(--u)*1.0);color:var(--navy);margin-bottom:.35em;line-height:1.2;}
