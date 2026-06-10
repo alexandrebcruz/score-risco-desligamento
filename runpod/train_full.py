@@ -54,8 +54,9 @@ def load(anos):
     for a in anos:
         for f in sorted(glob.glob(f"{DATA}/ano={a}/*.parquet")):
             d = pd.read_parquet(f, columns=RAW)
-            cbo = d["cbo"].astype(str).str.zfill(6)
-            cnae = d["cnae"].astype(str).str.zfill(7)
+            # interim novo já entrega cbo/cnae zfillados; só deriva os níveis
+            cbo = d["cbo"].astype(str)
+            cnae = d["cnae"].astype(str)
             d["cbo4"], d["cbo2"], d["cbo1"] = cbo.str[:4], cbo.str[:2], cbo.str[:1]
             d["cnae5"], d["cnae3"], d["cnae2"] = cnae.str[:5], cnae.str[:3], cnae.str[:2]
             d["y"] = (d["motivo_unificado"] == TARGET_MOTIVO).astype("int8")

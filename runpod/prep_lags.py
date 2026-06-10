@@ -9,15 +9,9 @@ Depois, train_ensemble_lags.py só LÊ esses arquivos — sem refazer joins.
 
 Uso: nohup python prep_lags.py > /workspace/prep.log 2>&1 &
 """
-import time, glob, os, gc, re
+import time, glob, os, gc
 import numpy as np
 import pandas as pd
-_RX = re.compile(r"^0+(?=\d)")
-def _fast_map(s, func):
-    u = s.astype(str).unique()
-    return s.astype(str).map({v: func(v) for v in u})
-def _norm_strip(v): return _RX.sub("", v) if re.fullmatch(r"0*\d+", v) else v
-
 DATA = "/workspace/data/rais"
 OUT = "/workspace/data/rais_lags"
 LAG_DIR = "/workspace/lags"
@@ -46,29 +40,16 @@ def log(m): print(f"[{time.time()-t0:7.0f}s] {m}", flush=True)
 AGGS = {f: pd.read_parquet(f"{LAG_DIR}/agg_{f}.parquet") for f in LAG_FEATURES}
 log(f"agregações carregadas ({len(LAG_FEATURES)} features)")
 
-# Códigos curtos com zero-padding inconsistente entre anos (2019-22 padded; 2023 não).
-# Normalizar (remover zeros à esquerda) é essencial: senão '02'(treino)!='2'(2023)
-# -> feature inútil no holdout e join de lag falha. Espelha cleaning.normalize_short_codes.
-CODIGOS_A_NORMALIZAR = ["faixa_remuneracao", "faixa_horas", "causa_afastamento"]
-# Remap de conteúdo: causa_afastamento default '99'(<=2022) virou '999'(2023, ~84%).
-CODE_REMAP = {"causa_afastamento": {"999": "99"}}
-
-def _norm_codes(d):
-    for c, mapa in CODE_REMAP.items():
-        if c in d.columns:
-            d[c] = _fast_map(d[c], lambda v: mapa.get(v, v))
-    for c in CODIGOS_A_NORMALIZAR:
-        if c in d.columns:
-            d[c] = _fast_map(d[c], _norm_strip)
-    return d
+# NOTA: remap 999->99, strip de zeros e zfill de cbo/cnae NÃO são mais feitos aqui —
+# o interim novo (src/cleaning.clean_rais_real) já entrega tudo harmonizado (faixas/
+# escolaridade como int64; cbo/cnae zfillados). Só derivamos os níveis hierárquicos.
+# ATENÇÃO: os aggs de lag (agg_*.parquet) construídos sobre o interim ANTIGO têm
+# valores no formato antigo (ex.: escolaridade "superior") -> RECONSTRUIR os aggs
+# (build_aggs_pod.py) sobre o interim novo antes de rodar este prep, senão o join
+# por valor falha p/ escolaridade/faixas.
 
 def enrich(d, ano):
-    d = _norm_codes(d)
-    # zfill consistente (2023 vem sem o zero à esquerda): sobrescreve a base p/ que
-    # a categoria E a chave de join do lag casem entre anos.
-    d["cbo"] = _fast_map(d["cbo"], lambda v: v.zfill(6))
-    d["cnae"] = _fast_map(d["cnae"], lambda v: v.zfill(7))
-    cbo, cnae = d["cbo"], d["cnae"]
+    cbo, cnae = d["cbo"].astype(str), d["cnae"].astype(str)
     d["cbo4"], d["cbo2"], d["cbo1"] = cbo.str[:4], cbo.str[:2], cbo.str[:1]
     d["cnae5"], d["cnae3"], d["cnae2"] = cnae.str[:5], cnae.str[:3], cnae.str[:2]
     d["y"] = (d["motivo_unificado"] == TARGET_MOTIVO).astype("int8")

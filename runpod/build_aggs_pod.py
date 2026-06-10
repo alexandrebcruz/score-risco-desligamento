@@ -4,10 +4,10 @@ Cada partição do interim (/workspace/data/rais/ano=*/*.parquet) é processada 
 um worker independente (multiprocessing.Pool) -> agregações parciais por feature;
 o processo principal concatena e soma por (valor, ano), salvando agg_<f>.parquet.
 
-Lógica de normalização espelha src/cleaning.normalize_short_codes + src/lags._derive_hier:
-  - causa_afastamento: remap '999'->'99' (default "sem afastamento" recodificado em 2023)
-  - faixa_remuneracao / faixa_horas / causa_afastamento: remove zero-padding ('02'->'2')
-  - cbo/cnae: zfill(6/7) ANTES de fatiar (2023 perde o zero à esquerda)
+O interim novo (src/cleaning.clean_rais_real) já entrega códigos harmonizados
+(remap/strip/zfill aplicados na escrita); aqui só derivamos os níveis hierárquicos
+de cbo/cnae antes de agregar. ATENÇÃO: aggs antigos (escolaridade "superior" etc.)
+são incompatíveis com o interim novo -> reconstruir tudo.
 
 Uso na pod:  python build_aggs_pod.py
 Saída:       /workspace/out_aggs/agg_<feature>.parquet
@@ -37,33 +37,12 @@ BASE_COLS = ["cbo", "cnae", "uf", "escolaridade", "tamanho_estab", "tipo_vinculo
              "faixa_remuneracao", "natureza_juridica", "natureza_setor",
              "intermitente", "simples", "faixa_horas", "causa_afastamento",
              "motivo_unificado"]
-CODIGOS_STRIP = ["faixa_remuneracao", "faixa_horas", "causa_afastamento"]
-CODE_REMAP = {"causa_afastamento": {"999": "99"}}
-
-
-import re as _re
-_RX = _re.compile(r"^0+(?=\d)")
-
-def _fast_map(s, func):
-    """Aplica `func` apenas aos valores ÚNICOS (poucos) e mapeia de volta —
-    evita operação de string por linha em colunas de milhões de linhas."""
-    u = s.astype(str).unique()
-    return s.astype(str).map({v: func(v) for v in u})
-
-def _norm_strip(v):
-    return _RX.sub("", v) if _re.fullmatch(r"0*\d+", v) else v
+# NOTA: remap 999->99, strip de zeros e zfill NÃO são mais feitos aqui — o interim
+# novo (src/cleaning.clean_rais_real) já entrega tudo harmonizado (faixas/escolaridade
+# int64; cbo/cnae zfillados). Só derivamos os níveis hierárquicos.
 
 def _normalize(d):
-    for c, mapa in CODE_REMAP.items():
-        if c in d.columns:
-            d[c] = _fast_map(d[c], lambda v: mapa.get(v, v))
-    for c in CODIGOS_STRIP:
-        if c in d.columns:
-            d[c] = _fast_map(d[c], _norm_strip)
-    # zfill consistente + substrings hierárquicas (também via mapa de únicos)
-    d["cbo"] = _fast_map(d["cbo"], lambda v: v.zfill(6))
-    d["cnae"] = _fast_map(d["cnae"], lambda v: v.zfill(7))
-    cbo, cnae = d["cbo"], d["cnae"]
+    cbo, cnae = d["cbo"].astype(str), d["cnae"].astype(str)
     d["cbo4"], d["cbo2"], d["cbo1"] = cbo.str[:4], cbo.str[:2], cbo.str[:1]
     d["cnae5"], d["cnae3"], d["cnae2"] = cnae.str[:5], cnae.str[:3], cnae.str[:2]
     return d

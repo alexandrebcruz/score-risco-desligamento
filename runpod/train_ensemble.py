@@ -45,20 +45,10 @@ def load(anos):
     for a in anos:
         for f in sorted(glob.glob(f"{DATA}/ano={a}/*.parquet")):
             d = pd.read_parquet(f, columns=RAW)
-            # Harmoniza códigos curtos entre anos (2023 perde zero-padding / recodifica):
-            # causa '999'->'99', strip de zeros em faixa_*; espelha cleaning.normalize_short_codes.
-            for c, mapa in {"causa_afastamento": {"999": "99"}}.items():
-                if c in d.columns:
-                    d[c] = d[c].astype(str).str.strip().replace(mapa)
-            for c in ("faixa_remuneracao", "faixa_horas", "causa_afastamento"):
-                if c in d.columns:
-                    s = d[c].astype(str).str.strip()
-                    num = s.str.fullmatch(r"0*\d+").fillna(False)
-                    d[c] = s.where(~num, s.str.replace(r"^0+(?=\d)", "", regex=True))
-            # zfill consistente e ESCRITO DE VOLTA na base (não só nas derivadas).
-            d["cbo"] = d["cbo"].astype(str).str.zfill(6)
-            d["cnae"] = d["cnae"].astype(str).str.zfill(7)
-            cbo, cnae = d["cbo"], d["cnae"]
+            # NOTA: remap 999->99, strip de zeros e zfill NÃO são mais necessários — o
+            # interim novo (src/cleaning.clean_rais_real) já entrega tudo harmonizado
+            # (faixas/escolaridade int64; cbo/cnae zfillados). Só derivamos os níveis.
+            cbo, cnae = d["cbo"].astype(str), d["cnae"].astype(str)
             d["cbo4"], d["cbo2"], d["cbo1"] = cbo.str[:4], cbo.str[:2], cbo.str[:1]
             d["cnae5"], d["cnae3"], d["cnae2"] = cnae.str[:5], cnae.str[:3], cnae.str[:2]
             d["y"] = (d["motivo_unificado"] == TARGET_MOTIVO).astype("int8")

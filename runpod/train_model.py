@@ -10,7 +10,6 @@ relançar pula o que já tem .cbm. Normalização via mapa de ÚNICOS (rápida).
 """
 import json, time, glob, os, gc, sys
 os.environ.setdefault("OMP_NUM_THREADS", "8")
-import re
 import numpy as np
 import pandas as pd
 
@@ -30,9 +29,9 @@ TARGET_MOTIVO = "involuntario_sjc"
 HOLDOUT_ANO = 2023
 EARLY = 50
 MAX_ITER = 3000
-CODIGOS_STRIP = ["faixa_remuneracao", "faixa_horas", "causa_afastamento"]
-CODE_REMAP = {"causa_afastamento": {"999": "99"}}
-_RX = re.compile(r"^0+(?=\d)")
+# NOTA: remap 999->99, strip de zeros e zfill de cbo/cnae NÃO são mais feitos aqui —
+# o interim novo (26 cols, src/cleaning.clean_rais_real) já entrega tudo harmonizado
+# (faixas/escolaridade como int64; cbo/cnae zfillados na escrita). Só derivamos níveis.
 
 t0 = time.time()
 def _rss():
@@ -41,19 +40,9 @@ def _rss():
     return -1
 def log(m): print(f"[{time.time()-t0:7.0f}s | RAM {_rss():.1f}GB] {m}", flush=True)
 
-def _fast_map(s, func):
-    u = s.astype(str).unique()
-    return s.astype(str).map({v: func(v) for v in u})
-def _norm_strip(v): return _RX.sub("", v) if re.fullmatch(r"0*\d+", v) else v
-
 def normalize(d):
-    for c, mapa in CODE_REMAP.items():
-        if c in d.columns: d[c] = _fast_map(d[c], lambda v: mapa.get(v, v))
-    for c in CODIGOS_STRIP:
-        if c in d.columns: d[c] = _fast_map(d[c], _norm_strip)
-    d["cbo"] = _fast_map(d["cbo"], lambda v: v.zfill(6))
-    d["cnae"] = _fast_map(d["cnae"], lambda v: v.zfill(7))
-    cbo, cnae = d["cbo"], d["cnae"]
+    """Deriva os níveis hierárquicos de CBO/CNAE (não existem no interim)."""
+    cbo, cnae = d["cbo"].astype(str), d["cnae"].astype(str)
     d["cbo4"], d["cbo2"], d["cbo1"] = cbo.str[:4], cbo.str[:2], cbo.str[:1]
     d["cnae5"], d["cnae3"], d["cnae2"] = cnae.str[:5], cnae.str[:3], cnae.str[:2]
     return d
