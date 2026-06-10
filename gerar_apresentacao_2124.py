@@ -322,8 +322,7 @@ def tabela_cats():
     ax2.set_xlabel("categoria (1 = menor risco · 14 = maior)"); ax2.set_ylabel("taxa real de dispensa (%)")
     ax2.set_title("Risco sempre crescente — em\nTODAS as safras 2016–2025", fontsize=10.5, weight="bold")
     ax2.grid(axis="y", alpha=.3)
-    fig.text(0.03, 0.045, "Risco real de 0,6% (cat 1) a 71,5% (cat 14) — lift 0,04×–5,2×.   "
-             "No HTML: o botão “Taxa de desligamento ao longo dos anos” abre o histórico 2016–2025.",
+    fig.text(0.03, 0.045, "Risco real de 0,6% (cat 1) a 71,5% (cat 14) — lift de 0,04× a 5,2×.",
              fontsize=9.5, color=GREY)
     footer(fig, "8"); pages.append(fig)
 tabela_cats()

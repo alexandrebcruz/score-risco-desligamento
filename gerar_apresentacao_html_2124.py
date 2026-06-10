@@ -378,23 +378,28 @@ HTML = r"""<!DOCTYPE html>
   #tip .tt-r{display:flex;justify-content:space-between;gap:18px;line-height:1.55;}
   #tip .tt-r span{color:#aab2c0;}
   #tip .tt-r b{font-variant-numeric:tabular-nums;}
-  .ratebtn{position:absolute;left:3%;bottom:6.5%;z-index:8;background:#2c5f9e;color:#fff;border:none;
-           border-radius:8px;padding:calc(var(--u)*0.55) calc(var(--u)*1.0);font-size:calc(var(--u)*1.05);
-           font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25);}
+  .ratebtn{position:absolute;left:3%;bottom:9%;z-index:8;background:#2c5f9e;color:#fff;border:none;
+           border-radius:8px;padding:calc(var(--u)*0.55) calc(var(--u)*1.1);font-size:calc(var(--u)*1.05);
+           font-weight:700;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.30);display:flex;align-items:center;gap:.45em;}
   .ratebtn:hover{background:#f4a722;color:#14233f;}
-  .modal{position:fixed;inset:0;background:rgba(8,14,26,.72);display:none;align-items:center;justify-content:center;z-index:200;}
+  /* modal ocupa só a área de CONTEÚDO do slide (abaixo do título, c/ margens) */
+  .modal{position:absolute;left:0;right:0;top:14%;bottom:0;background:rgba(10,16,28,.42);
+         display:none;align-items:center;justify-content:center;z-index:60;}
   .modal.on{display:flex;}
-  .modalbox{background:#fff;border-radius:12px;width:min(86vw,1000px);max-height:90vh;overflow:auto;
-            box-shadow:0 12px 50px rgba(0,0,0,.5);padding:18px 22px 14px;}
-  .modalbox h3{margin:0 0 2px;color:#14233f;font-size:19px;}
-  .modalbox .sub{color:#5b6675;font-size:12.5px;margin-bottom:8px;}
-  .modalbox .x{position:absolute;top:14px;right:18px;font-size:26px;color:#fff;cursor:pointer;background:none;border:none;}
+  .modalbox{position:relative;background:#fff;border-radius:12px;width:94%;height:94%;overflow:hidden;
+            display:flex;flex-direction:column;
+            box-shadow:0 10px 40px rgba(0,0,0,.45);padding:calc(var(--u)*1.4) calc(var(--u)*1.8) calc(var(--u)*1.0);}
+  .modalbox h3{margin:0 0 2px;color:#14233f;font-size:calc(var(--u)*1.7);}
+  .modalbox .sub{color:#5b6675;font-size:calc(var(--u)*1.05);margin-bottom:6px;}
+  .modalbox .x{position:absolute;top:calc(var(--u)*0.6);right:calc(var(--u)*1.0);font-size:calc(var(--u)*2.2);
+               color:#5b6675;cursor:pointer;background:none;border:none;line-height:1;}
+  .modalbox .x:hover{color:#d73027;}
   .ratectrls{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 4px;}
   .ratectrls button{font-size:12px;padding:2px 9px;border-radius:5px;border:1px solid #bbb;background:#f7f7f7;cursor:pointer;font-weight:600;}
   .ratechips{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;}
   .ratechips .chip{width:26px;height:21px;border-radius:4px;border:1.5px solid var(--c);background:var(--c);color:#fff;font-size:11px;font-weight:700;cursor:pointer;padding:0;}
   .ratechips .chip.off{background:#fff;color:#bbb;border-color:#ddd;}
-  #svg-rate{width:100%;height:auto;}
+  #svg-rate{flex:1 1 auto;min-height:0;width:100%;}
   .taxwrap{position:absolute;left:3%;right:3%;top:16%;bottom:4%;overflow:auto;}
   .taxhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5em;gap:1em;}
   .taxbtn{background:#2c5f9e;color:#fff;border:none;border-radius:7px;padding:calc(var(--u)*0.4) calc(var(--u)*0.9);
@@ -404,18 +409,18 @@ HTML = r"""<!DOCTYPE html>
 <body>
 <div class="deck"><div class="stage" id="stage">
 __SLIDES__
+  <div class="modal" id="ratemodal" onclick="if(event.target===this)closeRate()">
+    <div class="modalbox">
+      <button class="x" onclick="closeRate()">×</button>
+      <h3>Taxa de desligamento por categoria — 2016 a 2025</h3>
+      <div class="sub">Dispensa sem justa causa observada a cada ano. Faixa sombreada = período de modelagem (treino 2021–2024).</div>
+      <div class="ratectrls" id="rate-grp"></div>
+      <div class="ratechips" id="rate-chips"></div>
+      <svg id="svg-rate" viewBox="0 0 920 460" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+  </div>
   <div class="nav"><button onclick="go(-1)" title="anterior (←)">‹</button><span id="counter"></span><button onclick="go(1)" title="próximo (→)">›</button></div>
 </div></div>
-<div class="modal" id="ratemodal" onclick="if(event.target===this)closeRate()">
-  <div class="modalbox" style="position:relative">
-    <button class="x" style="color:#14233f" onclick="closeRate()">×</button>
-    <h3>Taxa de desligamento por categoria — 2016 a 2025</h3>
-    <div class="sub">Dispensa sem justa causa observada a cada ano. Faixa sombreada = período de modelagem (treino 2021–2024).</div>
-    <div class="ratectrls" id="rate-grp"></div>
-    <div class="ratechips" id="rate-chips"></div>
-    <svg id="svg-rate" viewBox="0 0 920 460" preserveAspectRatio="xMidYMid meet"></svg>
-  </div>
-</div>
 <div id="tip"></div>
 <script>
 const DATA=__DATA__, GROUPS=__GROUPS__, RATE=__RATE__;
