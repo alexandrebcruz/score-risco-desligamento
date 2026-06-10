@@ -81,6 +81,7 @@ def bullet(fig, x, y, lines, fs=13, dy=0.062, color=INK, gap_color="#f4a722"):
 
 PDF = "outputs/apresentacao_risco_2124.pdf"
 pages = []
+IDX = {}   # índices (0-based) de slides especiais p/ o deck HTML (robusto a reordenação)
 
 # ======================= 1. CAPA =======================
 def capa():
@@ -91,7 +92,7 @@ def capa():
     ax.text(0.06, 0.80, "MODELO DE RISCO DE DESLIGAMENTO", color="#9fc0e8",
             fontsize=15, weight="bold")
     ax.text(0.06, 0.70, "Probabilidade de dispensa sem justa causa", color="white", fontsize=30, weight="bold")
-    ax.text(0.06, 0.615, "Ensemble CatBoost treinado em 2021–2024 · sem vazamento de alvo · "
+    ax.text(0.06, 0.615, "Ensemble CatBoost treinado em 2021–2024 · "
             "validado em 10 anos de RAIS (2016–2025)", color="#c9d6e8", fontsize=13.5)
     cards = [("AUC (2025, futuro)", pct(AUC25), "out-of-time puro"),
              ("KS (2025)", pct(KS25), "separação forte"),
@@ -294,15 +295,16 @@ metodo_cat()
 
 # ======================= 8. TABELA DAS 14 CATEGORIAS =======================
 def tabela_cats():
-    fig = new_slide(); header(fig, "CATEGORIZAÇÃO · RESULTADO", "As 14 categorias — taxa real no agregado e por ano")
+    fig = new_slide(); header(fig, "CATEGORIZAÇÃO · RESULTADO", "As 14 categorias de risco (ponto ótimo)")
     ax = fig.add_axes([0.03, 0.07, 0.58, 0.76]); ax.axis("off")
     d = CATS.copy()
+    has_pm = "prob_media" in d.columns
     cell = []
     for _, r in d.iterrows():
-        cell.append([int(r.categoria), f"{r.prob_min*100:.1f}–{r.prob_max*100:.1f}%", f"{r.n/1e6:.0f}",
-                     f"{r.taxa_y*100:.1f}%", f"{r.taxa_2021*100:.1f}", f"{r.taxa_2022*100:.1f}",
-                     f"{r.taxa_2023*100:.1f}", f"{r.taxa_2024*100:.1f}"])
-    col = ["cat", "faixa de prob.", "n (mi)", "taxa", "'21", "'22", "'23", "'24"]
+        pm = f"{r.prob_media*100:.1f}%" if has_pm else "—"
+        cell.append([int(r.categoria), f"{r.prob_min*100:.1f}–{r.prob_max*100:.1f}%", f"{r.n/1e6:.1f}",
+                     f"{r.taxa_y*100:.1f}%", pm, f"{r.lift_vs_global:.2f}×"])
+    col = ["cat", "faixa de prob.", "n (mi)", "taxa real", "prob. méd.", "lift"]
     tbl = ax.table(cellText=cell, colLabels=col, loc="center", cellLoc="center")
     tbl.auto_set_font_size(False); tbl.set_fontsize(9.6); tbl.scale(1, 1.55)
     for j in range(len(col)):
@@ -319,12 +321,15 @@ def tabela_cats():
     ax2.set_xlabel("categoria (1 = menor risco · 14 = maior)"); ax2.set_ylabel("taxa real de dispensa (%)")
     ax2.set_title("Risco sempre crescente — em\nTODAS as safras 2016–2025", fontsize=10.5, weight="bold")
     ax2.grid(axis="y", alpha=.3)
-    fig.text(0.66, 0.055, "Risco de 0,6% (cat 1) a 71,5% (cat 14) — lift 0,04×–5,2×.", fontsize=10, color=GREY)
+    fig.text(0.03, 0.045, "Risco real de 0,6% (cat 1) a 71,5% (cat 14) — lift 0,04×–5,2×.   "
+             "No HTML: o botão “Taxa de desligamento ao longo dos anos” abre o histórico 2016–2025.",
+             fontsize=9.5, color=GREY)
     footer(fig, "8"); pages.append(fig)
 tabela_cats()
+IDX["tabcat"] = len(pages) - 1
 
 # ======================= 9. DIVISOR PERSONAS =======================
-divisor("Personas das categorias", "Quem é cada faixa de risco — referência 2021–2024", "9")
+divisor("Personas das categorias", "Quem é cada faixa de risco — perfil em 2025", "9")
 
 # ======================= 10. GRADIENTE =======================
 def gradiente_persona():
@@ -442,17 +447,18 @@ def fecho():
     ax.add_patch(Rectangle((0,0),1,1,color=NAVY))
     ax.add_patch(Rectangle((0.06,0.70),0.18,0.01,color="#f4a722"))
     ax.text(0.06, 0.78, "Síntese", color="white", fontsize=30, weight="bold")
-    pts = [f"Ensemble treinado em 2021–24, SEM vazamento de alvo: AUC {pct(AUC25)} e KS {pct(KS25)} no futuro puro (2025).",
+    pts = [f"Ensemble treinado em 2021–24: AUC {pct(AUC25)} e KS {pct(KS25)} no futuro puro (2025).",
            "Desempenho estável em 10 safras (AUC 76–81%), incluindo a pandemia — generaliza p/ trás e p/ frente.",
            "14 categorias ótimas por ganho de informação, com ordenação validada DENTRO de cada ano (2016–2025).",
-           "Personas: do servidor público (0,6%) ao operário da construção em micro construtora (71,5%).",
+           "Personas (2025): do servidor público (%s%%) ao operário da construção em micro construtora (%s%%)."
+           % (f"{PERS.taxa_y.min():.1f}".replace(".", ","), f"{PERS.taxa_y.max():.1f}".replace(".", ",")),
            "Sobrevivência MOB (ref. 2021–24) alimenta a política de prazos do consignado (apêndices B e C)."]
     for i, t in enumerate(pts):
         ax.text(0.06, 0.60 - i*0.082, "• " + t, color="#dbe6f3", fontsize=13.2)
     ax.text(0.06, 0.10, "⚠ Uso ético/LGPD: análise agregada e descritiva; decisões sobre indivíduos exigem "
             "revisão humana e cuidado com vieses (setor, escolaridade, região).", color="#9fc0e8", fontsize=11)
     pages.append(fig)
-fecho()
+# (chamado no FIM da apresentação — ver abaixo)
 
 # ======================= APÊNDICE A — CONSIGNADO PRIVADO =======================
 PERSONA_TXT_PRIV = {
@@ -541,6 +547,7 @@ def surv_curva():
     ax.imshow(plt.imread("outputs/figures/sobrevivencia_categorias_mob_2124.png")); ax.axis("off")
     footer(fig, "B1"); pages.append(fig)
 surv_curva()
+IDX["B1"] = len(pages) - 1
 
 def surv_weibull():
     fig = new_slide(); header(fig, "TEMPO ATÉ O DESLIGAMENTO · EXTRAPOLAÇÃO",
@@ -560,6 +567,7 @@ def surv_weibull():
     ax.imshow(plt.imread("outputs/figures/sobrevivencia_weibull_extrap_mob_2124.png")); ax.axis("off")
     footer(fig, "B2"); pages.append(fig)
 surv_weibull()
+IDX["B2"] = len(pages) - 1
 
 def surv_estatisticas():
     fig = new_slide(); header(fig, "TEMPO ATÉ O DESLIGAMENTO · ESTATÍSTICAS",
@@ -593,10 +601,51 @@ def surv_estatisticas():
     fig.text(0.64, 0.045, "Meses até o desligamento (>12m = extrapolação Weibull).", fontsize=9, color=GREY)
     footer(fig, "B3"); pages.append(fig)
 surv_estatisticas()
+IDX["B3"] = len(pages) - 1
 
 # ======================= APÊNDICE C — POLÍTICA DE CONSIGNADO =======================
 divisor("Apêndice C — Política de prazos do consignado",
         "Prazo máximo por confiança e cobertura esperada de parcelas, por categoria", "C")
+
+def consignado_conceitos():
+    fig = new_slide(); header(fig, "APLICAÇÃO · COMO LER AS TABELAS",
+                              "Da curva de sobrevivência aos números da política")
+    bullet(fig, 0.05, 0.77, [
+        (False, "Ponto de partida: S(t), a curva de sobrevivência da categoria"),
+        (True, "S(t) = probabilidade de o vínculo seguir ativo t meses após a entrada."),
+        (True, "Até 12 meses: medida direto dos dados (Kaplan-Meier); além de 12:"),
+        (None, "extrapolada pela curva de Weibull S(t)=exp(−(t/λ)ᵖ) ajustada à categoria."),
+        (False, "Prazo máximo por confiança c  (tabela da esquerda)"),
+        (True, "É o maior prazo t com confiança c de o tomador seguir empregado:"),
+        (None, "S(t) = c  ⇒  t = λ·(−ln c)^(1/p).  Ex.: c=90% → prazo onde S cai a 0,90."),
+        (True, "Colunas 95/90/85/80% = quão conservador é o limite (maior c = prazo menor)."),
+        (False, "Cobertura esperada de parcelas T  (tabela da direita)"),
+        (True, "Fração média das T parcelas que devem ser pagas em folha (com vínculo):"),
+        (None, "cobertura(T) = (S(1)+S(2)+…+S(T)) / T.  Ex.: 90% ≈ 9 de cada 10 parcelas."),
+    ], fs=12.2, dy=0.0585)
+    ax = fig.add_axes([0.63, 0.13, 0.33, 0.60]); ax.set_xlim(0, 36); ax.set_ylim(0, 1.02)
+    import numpy as _np
+    from math import log as _ln
+    p, lam = 1.15, 30.0
+    t = _np.linspace(0.2, 36, 200); S = _np.exp(-(t / lam) ** p)
+    ax.fill_between(t, S, color=BLUE, alpha=0.10)
+    ax.plot(t, S, color=BLUE, lw=2.4)
+    ax.axhline(0.90, ls="--", color="#d9822b", lw=1.2)
+    t90 = lam * (-_ln(0.90)) ** (1 / p)
+    ax.plot([t90, t90], [0, 0.90], ls="--", color="#d9822b", lw=1.2)
+    ax.plot(t90, 0.90, "o", color="#d9822b")
+    ax.text(0.5, 0.93, "c = 90%", fontsize=9, color="#b9671a")
+    ax.annotate("prazo máx.", (t90, 0.02), (t90 + 1.5, 0.20), fontsize=9, color="#b9671a",
+                arrowprops=dict(arrowstyle="->", color="#b9671a"))
+    ax.text(14, 0.45, "área ÷ T\n= cobertura", fontsize=8.5, color=BLUE, ha="center")
+    ax.set_xlabel("meses (MOB)", fontsize=9.5); ax.set_ylabel("S(t)", fontsize=9.5)
+    ax.set_title("S(t) define prazo e cobertura", fontsize=10.5, weight="bold")
+    ax.grid(alpha=.25)
+    for sp in ("top", "right"): ax.spines[sp].set_visible(False)
+    fig.text(0.05, 0.06, "λ (escala) e p (forma) vêm do ajuste de Weibull de cada categoria. "
+             ">12 meses é projeção; ≤12 é observado.", fontsize=9.5, color=GREY)
+    footer(fig, "C1"); pages.append(fig)
+consignado_conceitos()
 
 def consignado_tabelas():
     fig = new_slide(); header(fig, "APLICAÇÃO · CRÉDITO CONSIGNADO",
@@ -629,8 +678,13 @@ def consignado_tabelas():
              weight="bold", color=INK)
     fig.text(0.03, 0.035, "Prazo: t = λ·(−ln c)^(1/p). Cobertura: Σ S(m)/T, com S = KM (≤12 MOB) + Weibull (>12). "
              "Referência 2021–2024. >12m é projeção.", fontsize=9.5, color=GREY)
-    footer(fig, "C1"); pages.append(fig)
+    footer(fig, "C2"); pages.append(fig)
 consignado_tabelas()
+IDX["CTAB"] = len(pages) - 1
+
+# ======================= SÍNTESE (último slide) =======================
+fecho()
+IDX["FECHO"] = len(pages) - 1
 
 # ======================= salvar =======================
 _DUMP = os.environ.get("DECK_DUMP_PNG")

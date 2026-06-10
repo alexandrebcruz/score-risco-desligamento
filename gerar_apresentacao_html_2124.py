@@ -29,9 +29,11 @@ TMP = "/tmp/apresentacao_risco_2124.html"
 print("renderizando slides via gerar_apresentacao_2124.py ...")
 ns = runpy.run_path("gerar_apresentacao_2124.py")
 NP = len(ns["pages"])
-# índices: ...23=divisor B, 24=B1, 25=B2, 26=B3, 27=divisor C, 28=C1
-B1, B2, B3, C1 = NP - 5, NP - 4, NP - 3, NP - 1
-print(f"{NP} slides; interativos: B1={B1}, B2={B2}, B3={B3}, C1={C1}")
+IDX = ns["IDX"]                         # índices robustos vindos do deck
+B1, B2, B3 = IDX["B1"], IDX["B2"], IDX["B3"]
+CTAB = IDX["CTAB"]                      # slide das tabelas de consignado (vira HTML nativo)
+TABCAT = IDX["tabcat"]                  # slide 8 (tabela de categorias) -> ganha botão + modal
+print(f"{NP} slides; B1={B1} B2={B2} B3={B3} CTAB={CTAB} tabcat={TABCAT}")
 
 def inline_svg(path, pfx):
     s = open(path, encoding="utf-8").read()
@@ -74,6 +76,16 @@ GROUPS = [("Mínimo", [1], "#1a9850"), ("Baixo", [2, 3, 4], "#86cb66"),
           ("Médio-Baixo", [5, 6, 7], "#c9a227"), ("Médio", [8, 9, 10], "#fb8d3d"),
           ("Alto", [11, 12, 13, 14], "#d73027")]
 GROUPS_JSON = json.dumps([{"nome": n, "cats": c, "cor": col} for n, c, col in GROUPS], ensure_ascii=False)
+
+# ---------- taxa de desligamento por (categoria, ano) 2016–2025 — modal do slide 8 ----------
+_tx = pd.read_csv("outputs/tables/categoria_ano_taxa_2124.csv")
+_anos_tx = [c for c in _tx.columns if c != "categoria"]
+RATE = {"anos": [int(a) for a in _anos_tx],
+        "treino": [2021, 2024],   # período de modelagem (faixa sombreada, como no AUC/KS)
+        "series": [{"k": int(r.categoria), "cor": cor[int(r.categoria)],
+                    "v": [round(float(r[a]) * 100, 3) for a in _anos_tx]}
+                   for _, r in _tx.sort_values("categoria").iterrows()]}
+RATE_JSON = json.dumps(RATE, ensure_ascii=False)
 
 # ---------- dados do slide de FEATURES (importância clicável, layout do deck anterior) ----------
 _imp = pd.read_csv("outputs/runpod_retreino_2124/importancia_ensemble.csv").sort_values("imp_ensemble", ascending=False)
@@ -240,8 +252,14 @@ for i in range(NP):
                       "Extrapolação Weibull das curvas (até 36 MOB)", B2_TXT, "weib"))
     elif i == B3:
         slides.append(box_slide())
-    elif i == C1:
+    elif i == CTAB:
         slides.append(consig_tables_slide())
+    elif i == TABCAT:
+        # slide 8 estático + botão que abre o modal do histórico de taxa de desligamento
+        svg = inline_svg(f"{DUMP}/slide_{i:02d}.svg", f"s{i:02d}_")
+        slides.append(f'<div class="slide">{svg}'
+                      '<button class="ratebtn" onclick="openRate()">📈 Taxa de desligamento ao longo dos anos</button>'
+                      '</div>')
     else:
         slides.append(f'<div class="slide">{inline_svg(f"{DUMP}/slide_{i:02d}.svg", f"s{i:02d}_")}</div>')
 SLIDES = "\n".join(slides)
@@ -326,15 +344,42 @@ HTML = r"""<!DOCTYPE html>
   #tip .tt-r{display:flex;justify-content:space-between;gap:18px;line-height:1.55;}
   #tip .tt-r span{color:#aab2c0;}
   #tip .tt-r b{font-variant-numeric:tabular-nums;}
+  .ratebtn{position:absolute;left:3%;bottom:6.5%;z-index:8;background:#2c5f9e;color:#fff;border:none;
+           border-radius:8px;padding:calc(var(--u)*0.55) calc(var(--u)*1.0);font-size:calc(var(--u)*1.05);
+           font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25);}
+  .ratebtn:hover{background:#f4a722;color:#14233f;}
+  .modal{position:fixed;inset:0;background:rgba(8,14,26,.72);display:none;align-items:center;justify-content:center;z-index:200;}
+  .modal.on{display:flex;}
+  .modalbox{background:#fff;border-radius:12px;width:min(86vw,1000px);max-height:90vh;overflow:auto;
+            box-shadow:0 12px 50px rgba(0,0,0,.5);padding:18px 22px 14px;}
+  .modalbox h3{margin:0 0 2px;color:#14233f;font-size:19px;}
+  .modalbox .sub{color:#5b6675;font-size:12.5px;margin-bottom:8px;}
+  .modalbox .x{position:absolute;top:14px;right:18px;font-size:26px;color:#fff;cursor:pointer;background:none;border:none;}
+  .ratectrls{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 4px;}
+  .ratectrls button{font-size:12px;padding:2px 9px;border-radius:5px;border:1px solid #bbb;background:#f7f7f7;cursor:pointer;font-weight:600;}
+  .ratechips{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;}
+  .ratechips .chip{width:26px;height:21px;border-radius:4px;border:1.5px solid var(--c);background:var(--c);color:#fff;font-size:11px;font-weight:700;cursor:pointer;padding:0;}
+  .ratechips .chip.off{background:#fff;color:#bbb;border-color:#ddd;}
+  #svg-rate{width:100%;height:auto;}
 </style></head>
 <body>
 <div class="deck"><div class="stage" id="stage">
 __SLIDES__
   <div class="nav"><button onclick="go(-1)" title="anterior (←)">‹</button><span id="counter"></span><button onclick="go(1)" title="próximo (→)">›</button></div>
 </div></div>
+<div class="modal" id="ratemodal" onclick="if(event.target===this)closeRate()">
+  <div class="modalbox" style="position:relative">
+    <button class="x" style="color:#14233f" onclick="closeRate()">×</button>
+    <h3>Taxa de desligamento por categoria — 2016 a 2025</h3>
+    <div class="sub">Dispensa sem justa causa observada a cada ano. Faixa sombreada = período de modelagem (treino 2021–2024).</div>
+    <div class="ratectrls" id="rate-grp"></div>
+    <div class="ratechips" id="rate-chips"></div>
+    <svg id="svg-rate" viewBox="0 0 920 460" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+</div>
 <div id="tip"></div>
 <script>
-const DATA=__DATA__, GROUPS=__GROUPS__;
+const DATA=__DATA__, GROUPS=__GROUPS__, RATE=__RATE__;
 const IMP=__IMP__, FEATINFO=__FEATINFO__;
 const slides=[...document.querySelectorAll('.slide')]; let cur=0;
 const counter=document.getElementById('counter');
@@ -489,11 +534,60 @@ function makeImp(){
   selFeat(IMP[0].f);
 }
 makeImp();
+
+/* ---------- modal: taxa de desligamento ao longo dos anos (linhas por categoria) ---------- */
+const _rmodal=document.getElementById('ratemodal');
+function openRate(){ _rmodal.classList.add('on'); drawRate(); }
+function closeRate(){ _rmodal.classList.remove('on'); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape')closeRate(); });
+let _rateVis=new Set(RATE.series.map(s=>s.k)), _rateInit=false;
+function drawRate(){
+  const svg=document.getElementById('svg-rate'); if(!svg) return;
+  const NS='http://www.w3.org/2000/svg', W=920,HT=460,M={l:52,r:14,t:14,b:34},PW=W-M.l-M.r,PH=HT-M.t-M.b;
+  const anos=RATE.anos, n=anos.length;
+  let vmax=0; RATE.series.forEach(s=>{ if(_rateVis.has(s.k)) s.v.forEach(v=>{ if(v>vmax)vmax=v; }); });
+  vmax=Math.max(vmax*1.08, 1);
+  const xP=i=>M.l+(n<=1?0:i/(n-1))*PW, yP=v=>M.t+(1-v/vmax)*PH;
+  function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+  svg.innerHTML='';
+  // faixa de modelagem
+  const i0=anos.indexOf(RATE.treino[0]), i1=anos.indexOf(RATE.treino[1]);
+  if(i0>=0&&i1>=0){ const x0=xP(i0), x1=xP(i1);
+    svg.appendChild(el('rect',{x:x0,y:M.t,width:x1-x0,height:PH,fill:'#dce6f2',opacity:.7}));
+    const tt=el('text',{x:(x0+x1)/2,y:M.t+12,'text-anchor':'middle','font-size':11,'font-weight':'bold',fill:'#5b7da8'}); tt.textContent='treino (2021–24)'; svg.appendChild(tt); }
+  // grades + eixos
+  const NT=5;
+  for(let g=0;g<=NT;g++){ const v=vmax*g/NT, y=yP(v);
+    svg.appendChild(el('line',{x1:M.l,y1:y,x2:W-M.r,y2:y,stroke:'#eee'}));
+    const t=el('text',{x:M.l-6,y:y+3,'text-anchor':'end','font-size':11,fill:'#666'}); t.textContent=v.toFixed(0)+'%'; svg.appendChild(t); }
+  anos.forEach((a,i)=>{ const x=xP(i);
+    const t=el('text',{x:x,y:M.t+PH+16,'text-anchor':'middle','font-size':10.5,fill:'#666'}); t.textContent=a; svg.appendChild(t); });
+  svg.appendChild(el('line',{x1:M.l,y1:M.t,x2:M.l,y2:M.t+PH,stroke:'#999'}));
+  svg.appendChild(el('line',{x1:M.l,y1:M.t+PH,x2:W-M.r,y2:M.t+PH,stroke:'#999'}));
+  const yl=el('text',{'text-anchor':'middle','font-size':11,fill:'#1b2430',transform:'translate(14,'+(M.t+PH/2)+') rotate(-90)'}); yl.textContent='taxa de desligamento (%)'; svg.appendChild(yl);
+  // linhas
+  RATE.series.forEach(s=>{ if(!_rateVis.has(s.k))return;
+    let d='M '+xP(0)+' '+yP(s.v[0]); for(let i=1;i<n;i++)d+=' L '+xP(i)+' '+yP(s.v[i]);
+    svg.appendChild(el('path',{d:d,fill:'none',stroke:s.cor,'stroke-width':2}));
+    for(let i=0;i<n;i++)svg.appendChild(el('circle',{cx:xP(i),cy:yP(s.v[i]),r:2.4,fill:s.cor})); });
+  if(!_rateInit){
+    const chips=document.getElementById('rate-chips'), grp=document.getElementById('rate-grp');
+    RATE.series.forEach(s=>{ const b=document.createElement('button'); b.className='chip'; b.textContent=s.k; b.style.setProperty('--c',s.cor);
+      b.onclick=()=>{ if(_rateVis.has(s.k))_rateVis.delete(s.k); else _rateVis.add(s.k); syncRchips(); drawRate(); }; chips.appendChild(b); });
+    const gb=(lab,fn,col)=>{ const b=document.createElement('button'); b.textContent=lab; if(col){b.style.borderColor=col;b.style.color=col;} b.onclick=fn; grp.appendChild(b); };
+    gb('Todas',()=>{RATE.series.forEach(s=>_rateVis.add(s.k));syncRchips();drawRate();});
+    gb('Nenhuma',()=>{_rateVis.clear();syncRchips();drawRate();});
+    GROUPS.forEach(g=>gb(g.nome,()=>{_rateVis.clear();g.cats.forEach(k=>_rateVis.add(k));syncRchips();drawRate();},g.cor));
+    _rateInit=true; syncRchips();
+  }
+}
+function syncRchips(){ document.querySelectorAll('#rate-chips .chip').forEach(c=>c.classList.toggle('off',!_rateVis.has(+c.textContent))); }
 </script>
 </body></html>"""
 
 HTML = (HTML.replace("__FONTS__", FONTS).replace("__SLIDES__", SLIDES)
             .replace("__DATA__", DATA).replace("__GROUPS__", GROUPS_JSON)
+            .replace("__RATE__", RATE_JSON)
             .replace("__IMP__", IMP_JSON).replace("__FEATINFO__", FEATINFO_JSON))
 with open(TMP, "w", encoding="utf-8") as f:
     f.write(HTML)

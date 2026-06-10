@@ -13,14 +13,14 @@ cbo1/cnae2/uf com piso de 5%, médias numéricas), adaptados ao schema novo:
 
 Uso: /tmp/consig_venv/bin/python persona_categorias_2124.py
 """
-import glob, time
+import glob, time, sys
 from collections import defaultdict
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 
 PRED = "data/processed/predicoes_2124"
-ANOS_REF = [2021, 2022, 2023, 2024]
+ANOS_REF = [int(a) for a in sys.argv[1:]] or [2025]   # default: personas descritas com 2025
 KCOL = "categoria_risco"
 COLS = [KCOL, "y", "prob_desligamento", "idade", "tempo_vinculo_meses",
         "qtd_dias_afastamento", "tipo_vinculo", "faixa_remuneracao", "escolaridade",
