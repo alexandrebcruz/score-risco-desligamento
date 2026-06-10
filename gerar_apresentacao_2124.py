@@ -29,6 +29,7 @@ PERS_PRIV = pd.read_csv("outputs/tables/persona_categorias_2124_privado.csv")
 STAT = pd.read_csv("outputs/tables/sobrevivencia_weibull_estatisticas_mono_mob_2124.csv")
 PRAZO = pd.read_csv("outputs/tables/consignado_prazo_max_2124.csv")
 COB = pd.read_csv("outputs/tables/consignado_cobertura_parcelas_2124.csv")
+TAXA = pd.read_csv("outputs/tables/consignado_taxa_breakeven_2124.csv")
 
 AUC25 = ME.loc[2025, "AUC"]; KS25 = ME.loc[2025, "KS"]
 def pct(v, nd=1):
@@ -604,8 +605,8 @@ surv_estatisticas()
 IDX["B3"] = len(pages) - 1
 
 # ======================= APÊNDICE C — POLÍTICA DE CONSIGNADO =======================
-divisor("Apêndice C — Política de prazos do consignado",
-        "Prazo máximo por confiança e cobertura esperada de parcelas, por categoria", "C")
+divisor("Apêndice C — Política de prazos e taxas do consignado",
+        "Prazo máximo, cobertura de parcelas e taxa de juros mínima, por categoria", "C")
 
 def consignado_conceitos():
     fig = new_slide(); header(fig, "APLICAÇÃO · COMO LER AS TABELAS",
@@ -681,6 +682,79 @@ def consignado_tabelas():
     footer(fig, "C2"); pages.append(fig)
 consignado_tabelas()
 IDX["CTAB"] = len(pages) - 1
+
+def taxa_conceitos():
+    fig = new_slide(); header(fig, "APLICAÇÃO · TAXA DE JUROS MÍNIMA",
+                              "Da cobertura de parcelas à taxa de equilíbrio")
+    bullet(fig, 0.05, 0.77, [
+        (False, "A pergunta"),
+        (True, "Qual a MENOR taxa que ainda recupera o valor emprestado, dado que parte"),
+        (None, "das parcelas deixa de ser paga quando o tomador é desligado?"),
+        (False, "O modelo financeiro (Tabela Price)"),
+        (True, "Parcela fixa:  A = P · i / (1 − (1+i)^−T)   (P = principal, i = juros, T = prazo)."),
+        (True, "Só se paga a parcela do mês m se o vínculo seguir ativo — prob. S(m)."),
+        (None, "Recebido esperado = A · Σ S(m) = A · T · cobertura(T)."),
+        (False, "Break-even (receber ≥ principal)"),
+        (True, "A · T · cobertura(T) ≥ P   ⟺   i · T · c / (1 − (1+i)^−T) ≥ 1."),
+        (True, "Resolve-se i (a taxa mínima) numericamente para cada categoria e prazo;"),
+        (None, "anual = (1+i)¹² − 1.  É um PISO de quebra-zero — some custo de funding + margem."),
+    ], fs=12.1, dy=0.0575)
+    # diagrama: recebido esperado vs principal
+    ax = fig.add_axes([0.63, 0.13, 0.33, 0.60]); ax.set_xlim(0, 1); ax.set_ylim(0, 1.35)
+    ax.axhline(1.0, ls="--", color="#444", lw=1.2); ax.text(0.02, 1.04, "principal (P)", fontsize=9, color="#444")
+    import numpy as _np
+    cats_ex = [2, 6, 10, 13]; xs = _np.arange(len(cats_ex))
+    # recebido com taxa baixa (1%/mês, T=24) -> mostra quem recupera e quem não
+    i_demo = 0.01; T = 24
+    A = i_demo / (1 - (1 + i_demo) ** (-T))
+    vals = [A * T * (float(COB.loc[COB.categoria == c, "T_24"].iloc[0]) / 100.0) for c in cats_ex]
+    cores = [gcolor(c) for c in cats_ex]
+    ax.bar(xs, vals, color=cores, width=0.6)
+    for x, v, c in zip(xs, vals, cats_ex):
+        ax.text(x, v + 0.03, f"{v:.2f}", ha="center", fontsize=8.5, color=INK)
+    ax.set_xticks(xs); ax.set_xticklabels([f"cat {c}" for c in cats_ex], fontsize=8.5)
+    ax.set_ylabel("recebido / principal", fontsize=9)
+    ax.set_title("Mesma taxa (1%/mês, T=24): só\nbaixo risco recupera P", fontsize=9.5, weight="bold")
+    ax.set_yticks([0, 0.5, 1.0]); ax.tick_params(labelsize=8)
+    for sp in ("top", "right"): ax.spines[sp].set_visible(False)
+    fig.text(0.05, 0.055, "Hipótese conservadora: ZERO recuperação do saldo após o desligamento "
+             "(FGTS/rescisão/portabilidade reduziriam o piso). Valores nominais.", fontsize=9.5, color=GREY)
+    footer(fig, "C3"); pages.append(fig)
+taxa_conceitos()
+
+def consignado_taxas():
+    fig = new_slide(); header(fig, "APLICAÇÃO · TAXA DE JUROS MÍNIMA",
+                              "Taxa de equilíbrio (% ao mês) por categoria e prazo")
+    ax = fig.add_axes([0.05, 0.10, 0.66, 0.70]); ax.axis("off")
+    TS = [6, 12, 18, 24, 36, 48, 60]
+    cell = [[int(r.categoria)] + [f"{r[f'm_T{t}']:.2f}" for t in TS] for _, r in TAXA.iterrows()]
+    col = ["cat"] + [f"T={t}" for t in TS]
+    tbl = ax.table(cellText=cell, colLabels=col, loc="center", cellLoc="center")
+    tbl.auto_set_font_size(False); tbl.set_fontsize(9.6); tbl.scale(1, 1.55)
+    for j in range(len(col)):
+        c = tbl[0, j]; c.set_facecolor(NAVY); c.set_text_props(color="white", weight="bold")
+    for i in range(1, len(cell) + 1):
+        tbl[i, 0].set_facecolor(gcolor(cell[i-1][0])); tbl[i, 0].set_text_props(color="white", weight="bold")
+        if i % 2 == 0:
+            for j in range(1, len(col)): tbl[i, j].set_facecolor("#f4f7fb")
+    fig.text(0.05, 0.84, "Taxa MÍNIMA para recuperar o principal — % ao mês", fontsize=12, weight="bold", color=INK)
+    # destaque executivo
+    ax2 = fig.add_axes([0.74, 0.12, 0.22, 0.66]); ax2.axis("off"); ax2.set_xlim(0, 1); ax2.set_ylim(0, 1)
+    ax2.add_patch(FancyBboxPatch((0, 0), 1, 1, boxstyle="round,pad=0.02", facecolor=LIGHT, linewidth=0))
+    ax2.text(0.5, 0.93, "Leitura (T=24)", ha="center", fontsize=11.5, weight="bold", color=NAVY)
+    destaques = [(1, "0,06%/mês"), (4, "0,82%/mês"), (8, "2,68%/mês"), (11, "5,18%/mês"), (14, "18,2%/mês")]
+    for k, (c, txt) in enumerate(destaques):
+        y = 0.78 - k * 0.155
+        ax2.add_patch(Rectangle((0.06, y - 0.02), 0.06, 0.10, color=gcolor(c)))
+        ax2.text(0.18, y + 0.03, f"cat {c}", fontsize=10.5, color=INK, va="center", weight="bold")
+        ax2.text(0.97, y + 0.03, txt, fontsize=10.5, color=BLUE, va="center", ha="right", weight="bold")
+    fig.text(0.74, 0.075, "No HTML: botão alterna\nentre % ao mês e % ao ano.", fontsize=9, color=GREY)
+    fig.text(0.05, 0.045, "Piso de quebra-zero (recebimento nominal ≥ principal). Taxa praticada = piso + "
+             "funding + custo operacional + margem. Categorias altas só fecham em prazos curtos.",
+             fontsize=9.5, color=GREY)
+    footer(fig, "C4"); pages.append(fig)
+consignado_taxas()
+IDX["TAXTAB"] = len(pages) - 1
 
 # ======================= SÍNTESE (último slide) =======================
 fecho()

@@ -230,6 +230,38 @@ def _cov_tbl():
     return '<table class="aptbl"><thead>%s</thead><tbody>%s</tbody></table>' % (h, body)
 TERMO_TBL, COV_TBL = _termo_tbl(), _cov_tbl()
 
+# ---------- taxa de juros mínima (break-even): tabela nativa com toggle mês/ano ----------
+TAXA = pd.read_csv("outputs/tables/consignado_taxa_breakeven_2124.csv").set_index("categoria")
+_TS_TX = [6, 12, 18, 24, 36, 48, 60]
+def _taxa_tbl(modo):    # modo: "m" (% a.m.) ou "a" (% a.a.)
+    h = "<tr><th>cat</th>" + "".join(f"<th>T={t}</th>" for t in _TS_TX) + "</tr>"
+    # normaliza cor pela posição relativa da taxa (log) p/ heat consistente entre modos
+    vmax = TAXA["m_T60"].max()
+    body = ""
+    for k in TAXA.index:
+        k = int(k); cells = ""
+        for t in _TS_TX:
+            v = float(TAXA.loc[k, f"{modo}_T{t}"])
+            frac = 1 - min(1.0, (float(TAXA.loc[k, f"m_T{t}"]) / vmax) ** 0.5)  # verde=baixa, vermelho=alta
+            dec = 2 if modo == "m" else 1
+            cells += '<td style="background:%s">%s%%</td>' % (_heat(frac), f"{v:.{dec}f}".replace(".", ","))
+        body += "<tr>" + _catcell(k) + cells + "</tr>"
+    return '<table class="aptbl"><thead>%s</thead><tbody>%s</tbody></table>' % (h, body)
+TAXA_TBL_M, TAXA_TBL_A = _taxa_tbl("m"), _taxa_tbl("a")
+
+def taxa_table_slide():
+    return ('<div class="slide cust"><div class="hb"><span class="kick">REFERÊNCIA · TAXA DE JUROS MÍNIMA</span>'
+            '<span class="ttl">Taxa de equilíbrio (break-even) por categoria e prazo</span></div>'
+            '<div class="taxwrap">'
+            '<div class="taxhead"><div class="apt-h" id="tax-h">Taxa mínima para recuperar o principal — % ao mês</div>'
+            '<button class="taxbtn" id="tax-btn" onclick="toggleTaxa()">Ver % ao ano →</button></div>'
+            '<div id="tax-m">' + TAXA_TBL_M + '</div>'
+            '<div id="tax-a" style="display:none">' + TAXA_TBL_A + '</div>'
+            '<div class="apt-note">Piso de quebra-zero: recebido nominal esperado = A·Σ S(m) ≥ principal '
+            '(A = parcela Price; hipótese conservadora de zero recuperação após o desligamento). '
+            'Taxa praticada = este piso + custo de captação + custo operacional + margem.</div>'
+            '</div></div>')
+
 def consig_tables_slide():
     return ('<div class="slide cust"><div class="hb"><span class="kick">REFERÊNCIA PARA A POLÍTICA DE CONCESSÃO</span>'
             '<span class="ttl">Prazo máximo e cobertura de parcelas por categoria (14 faixas, ref. 2021–2024)</span></div>'
@@ -254,6 +286,8 @@ for i in range(NP):
         slides.append(box_slide())
     elif i == CTAB:
         slides.append(consig_tables_slide())
+    elif i == IDX["TAXTAB"]:
+        slides.append(taxa_table_slide())
     elif i == TABCAT:
         # slide 8 estático + botão que abre o modal do histórico de taxa de desligamento
         svg = inline_svg(f"{DUMP}/slide_{i:02d}.svg", f"s{i:02d}_")
@@ -361,6 +395,11 @@ HTML = r"""<!DOCTYPE html>
   .ratechips .chip{width:26px;height:21px;border-radius:4px;border:1.5px solid var(--c);background:var(--c);color:#fff;font-size:11px;font-weight:700;cursor:pointer;padding:0;}
   .ratechips .chip.off{background:#fff;color:#bbb;border-color:#ddd;}
   #svg-rate{width:100%;height:auto;}
+  .taxwrap{position:absolute;left:3%;right:3%;top:16%;bottom:4%;overflow:auto;}
+  .taxhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5em;gap:1em;}
+  .taxbtn{background:#2c5f9e;color:#fff;border:none;border-radius:7px;padding:calc(var(--u)*0.4) calc(var(--u)*0.9);
+          font-size:calc(var(--u)*1.0);font-weight:700;cursor:pointer;white-space:nowrap;}
+  .taxbtn:hover{background:#f4a722;color:#14233f;}
 </style></head>
 <body>
 <div class="deck"><div class="stage" id="stage">
@@ -582,6 +621,16 @@ function drawRate(){
   }
 }
 function syncRchips(){ document.querySelectorAll('#rate-chips .chip').forEach(c=>c.classList.toggle('off',!_rateVis.has(+c.textContent))); }
+
+/* ---------- tabela de taxas: alterna entre % ao mês e % ao ano ---------- */
+let _taxAnual=false;
+function toggleTaxa(){
+  _taxAnual=!_taxAnual;
+  document.getElementById('tax-m').style.display=_taxAnual?'none':'';
+  document.getElementById('tax-a').style.display=_taxAnual?'':'none';
+  document.getElementById('tax-h').textContent='Taxa mínima para recuperar o principal — '+(_taxAnual?'% ao ano':'% ao mês');
+  document.getElementById('tax-btn').textContent=_taxAnual?'← Ver % ao mês':'Ver % ao ano →';
+}
 </script>
 </body></html>"""
 
