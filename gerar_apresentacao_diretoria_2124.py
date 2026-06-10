@@ -44,7 +44,7 @@ def header(fig, kicker, title, band=NAVY):
     ax.text(0.035, 0.30, title, color="white", fontsize=20, weight="bold", va="center")
 
 def footer(fig, n):
-    fig.text(0.035, 0.03, "Crédito Consignado · risco de permanência no emprego · esteira 2124 (RAIS 2016–2025)",
+    fig.text(0.035, 0.03, "Crédito Consignado · risco de permanência no emprego · RAIS 2016–2025 · treino 2021–2024",
              fontsize=8, color=GREY)
     fig.text(0.965, 0.03, f"{n}", fontsize=9, color=GREY, ha="right")
 
@@ -67,7 +67,7 @@ def capa():
     ax = fig.add_axes([0, 0, 1, 1]); ax.axis("off"); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
     ax.add_patch(Rectangle((0, 0), 1, 1, color=NAVY))
     ax.add_patch(Rectangle((0, 0.595), 1, 0.012, color="#f4a722"))
-    ax.text(0.06, 0.82, "POLÍTICA DE CRÉDITO CONSIGNADO — MODELO v2", color="#9fc0e8", fontsize=15, weight="bold")
+    ax.text(0.06, 0.82, "POLÍTICA DE CRÉDITO CONSIGNADO", color="#9fc0e8", fontsize=15, weight="bold")
     ax.text(0.06, 0.725, "Risco de permanência no emprego", color="white", fontsize=31, weight="bold")
     ax.text(0.06, 0.648, "como base para a definição de prazo e elegibilidade", color="white", fontsize=22, weight="bold")
     ax.text(0.06, 0.545, "Modelo sobre dados públicos (RAIS) · treinado em 2021–2024 · validado em 10 anos (743 mi de vínculos)",
@@ -319,7 +319,7 @@ NTOTAL = len(slides)
 
 HTML = r"""<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="utf-8">
-<title>Crédito Consignado — política de concessão (Diretoria · esteira 2124)</title>
+<title>Crédito Consignado — política de concessão (Diretoria)</title>
 <style>
   __FONTS__
   :root{ --navy:#14233f; --ink:#1b2430; --grey:#5b6675; }

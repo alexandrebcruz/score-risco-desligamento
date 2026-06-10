@@ -64,7 +64,7 @@ def header(fig, kicker, title, band=NAVY):
     ax.text(0.035, 0.30, title, color="white", fontsize=20, weight="bold", va="center")
 
 def footer(fig, n):
-    fig.text(0.035, 0.03, "Risco de Desligamento · esteira 2124 · RAIS 2016–2025 · treino 2021–2024",
+    fig.text(0.035, 0.03, "Risco de Desligamento · RAIS 2016–2025 · treino 2021–2024",
              fontsize=8, color=GREY)
     fig.text(0.965, 0.03, f"{n}", fontsize=9, color=GREY, ha="right")
 
@@ -88,7 +88,7 @@ def capa():
     ax = fig.add_axes([0, 0, 1, 1]); ax.axis("off"); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
     ax.add_patch(Rectangle((0, 0), 1, 1, color=NAVY))
     ax.add_patch(Rectangle((0, 0.64), 1, 0.012, color="#f4a722"))
-    ax.text(0.06, 0.80, "MODELO DE RISCO DE DESLIGAMENTO — v2 (ESTEIRA 2124)", color="#9fc0e8",
+    ax.text(0.06, 0.80, "MODELO DE RISCO DE DESLIGAMENTO", color="#9fc0e8",
             fontsize=15, weight="bold")
     ax.text(0.06, 0.70, "Probabilidade de dispensa sem justa causa", color="white", fontsize=30, weight="bold")
     ax.text(0.06, 0.615, "Ensemble CatBoost treinado em 2021–2024 · sem vazamento de alvo · "
@@ -112,17 +112,18 @@ capa()
 
 # ======================= 2. CONTEXTO =======================
 def contexto():
-    fig = new_slide(); header(fig, "VISÃO GERAL", "O problema e o que mudou nesta versão")
+    fig = new_slide(); header(fig, "VISÃO GERAL", "O problema e a abordagem")
     bullet(fig, 0.05, 0.76, [
         (False, "Objetivo"),
         (True, "Estimar a probabilidade de um vínculo formal ser encerrado por"),
         (None, "dispensa sem justa causa nos meses seguintes."),
-        (False, "Novidades da esteira 2124 (vs. modelo anterior)"),
-        (True, "Treino em anos recentes (2021–2024) e avaliação em TODOS os anos 2016–2025."),
-        (True, "Features sem vazamento: tempo de vínculo medido NA ENTRADA da janela"),
-        (None, "e afastamento normalizado por exposição (dias/mês)."),
-        (True, "Ordinais (escolaridade, faixas) tratadas como numéricas (a ordem vira sinal)."),
-        (True, "14 categorias de risco com ordenação validada ANO A ANO (e não só no agregado)."),
+        (False, "Dados"),
+        (True, "RAIS — registro oficial de todos os vínculos formais do país."),
+        (True, "10 anos de microdados (2016–2025), 743 milhões de vínculos."),
+        (False, "Validação honesta (out-of-time)"),
+        (True, "Treina em 2021–2024 e avalia em TODOS os anos 2016–2025 —"),
+        (None, "2025 é futuro puro: mede a capacidade real de prever, não de decorar."),
+        (True, "Só usa o que se sabe NA ENTRADA do vínculo (desenho prospectivo)."),
     ], fs=12.8, dy=0.066)
     ax = fig.add_axes([0.66, 0.16, 0.30, 0.60]); ax.axis("off"); ax.set_xlim(0,1); ax.set_ylim(0,1)
     ax.add_patch(FancyBboxPatch((0,0),1,1, boxstyle="round,pad=0.02", facecolor=LIGHT, linewidth=0))
@@ -139,33 +140,32 @@ contexto()
 
 # ======================= 3. DADOS / ANTI-VAZAMENTO =======================
 def preparo():
-    fig = new_slide(); header(fig, "DESENVOLVIMENTO · DADOS", "Base leak-free: medir só o que se sabe na entrada")
+    fig = new_slide(); header(fig, "DESENVOLVIMENTO · DADOS", "Features: medir apenas o que se sabe na entrada")
     bullet(fig, 0.05, 0.76, [
         (False, "21 features por vínculo (todas da RAIS pública)"),
         (True, "Ocupação (CBO) e setor (CNAE) em níveis hierárquicos; UF; idade;"),
         (None, "tipo de contrato; natureza jurídica/setor; Simples; intermitente;"),
         (None, "escolaridade, porte, faixas de remuneração/horas (ordinais numéricas)."),
-        (False, "Correções de VAZAMENTO do alvo (auditadas empiricamente)"),
-        (True, "Tempo de vínculo: a RAIS mede no FIM (data do desligamento) —"),
-        (None, "recalculado para a antiguidade NA ENTRADA da janela."),
-        (True, "Dias de afastamento: total do ano vira taxa POR MÊS observado."),
-        (True, "Causa de afastamento: removida (truncada pela exposição)."),
+        (False, "Desenho prospectivo (anti-vazamento, auditado empiricamente)"),
+        (True, "Tempo de vínculo = antiguidade NA ENTRADA da janela de observação."),
+        (True, "Afastamento = dias POR MÊS de exposição (taxa, não acumulado)."),
+        (True, "Nada do desfecho (mês/motivo do desligamento) entra como feature —"),
+        (None, "o desfecho é usado apenas como ALVO do aprendizado."),
     ], fs=12.6, dy=0.063)
     ax = fig.add_axes([0.56, 0.14, 0.42, 0.62]); ax.axis("off")
-    cell = [["tempo_vinculo", "no desligamento", "na entrada"],
-            ["dias_afastamento", "total no ano", "por mês observado"],
-            ["causa_afastamento", "feature", "removida"],
-            ["escolaridade/faixas", "categóricas", "numéricas (ordem)"]]
-    col = ["variável", "antes (vazava)", "agora"]
+    cell = [["tempo_vinculo", "antiguidade na entrada"],
+            ["dias_afastamento", "taxa por mês de exposição"],
+            ["escolaridade/faixas", "numéricas ordinais (1..11 etc.)"],
+            ["mês/motivo do desligamento", "APENAS alvo — nunca feature"]]
+    col = ["variável", "como entra no modelo"]
     tbl = ax.table(cellText=cell, colLabels=col, loc="center", cellLoc="center")
     tbl.auto_set_font_size(False); tbl.set_fontsize(10.5); tbl.scale(1, 1.9)
     for j in range(len(col)):
         c = tbl[0, j]; c.set_facecolor(NAVY); c.set_text_props(color="white", weight="bold")
     for i in range(1, 5):
-        tbl[i, 2].set_text_props(color="#1a9850", weight="bold")
-    fig.text(0.56, 0.105, "Sem as correções, o modelo 'aprendia' QUANDO o desligamento ocorreu — performance\n"
-             "inflada que não se sustenta em produção. A versão atual mede risco prospectivo honesto.",
-             fontsize=10, color=GREY)
+        tbl[i, 1].set_text_props(color="#1a9850", weight="bold")
+    fig.text(0.56, 0.105, "Tudo que alimenta o modelo é conhecido no início do vínculo — o risco estimado\n"
+             "é prospectivo e se sustenta em produção.", fontsize=10, color=GREY)
     footer(fig, "3"); pages.append(fig)
 preparo()
 
@@ -269,7 +269,7 @@ def metodo_cat():
         (False, "Cortes ótimos"),
         (True, "Para cada K, programação dinâmica acha os cortes de probabilidade"),
         (None, "que maximizam a informação mútua I(faixa; alvo) em 2021–2024."),
-        (False, "Critério de K — DUPLO (novidade desta versão)"),
+        (False, "Critério de K — duplo"),
         (True, "O risco médio das faixas deve crescer estritamente no AGREGADO"),
         (None, "e DENTRO de cada ano (2021, 22, 23 e 24) individualmente."),
         (True, "Quebra em K=15 (ano 2024) → K*=14, com 99,1% do ganho máximo."),
@@ -551,9 +551,9 @@ def surv_weibull():
         (True, "S(t) = exp(−(t/λ)ᵖ);  hazard ∝ t^(p−1)."),
         (True, "Ajuste por regressão pura: ln(−ln S) = p·ln t + ln α (OLS, 12 pts)."),
         (True, "R² médio ≈ 0,994 — extrapola até 36 MOB (tracejado)."),
-        (False, "Qualidade nesta versão"),
-        (True, "Q1/mediana/média/Q3 saem MONOTÔNICOS sem ajuste (0 inversões),"),
-        (None, "ante ~8 categorias com inversão no modelo anterior."),
+        (False, "Qualidade do ajuste"),
+        (True, "Q1/mediana/média/Q3 decrescem monotonicamente com a categoria"),
+        (None, "(0 inversões) — a isotônica de salvaguarda não precisou atuar."),
     ], fs=12.4, dy=0.063)
     ax = fig.add_axes([0.50, 0.10, 0.48, 0.70])
     ax.imshow(plt.imread("outputs/figures/sobrevivencia_weibull_extrap_mob_2124.png")); ax.axis("off")

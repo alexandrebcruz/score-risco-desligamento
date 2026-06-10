@@ -162,8 +162,8 @@ B2_TXT = bullets_html([
     (True, "S(t) = exp(−(t/λ)ᵖ);  hazard ∝ t^(p−1)."),
     (True, "Ajuste por regressão pura: ln(−ln S) = p·ln t + ln α (OLS, 12 pts)."),
     (True, "R² médio ≈ 0,994 — extrapola até 36 MOB (tracejado)."),
-    (False, "Qualidade nesta versão"),
-    (True, "Q1/mediana/média/Q3 monotônicos SEM ajuste (0 inversões); projeção >12m é suposição."),
+    (False, "Qualidade do ajuste"),
+    (True, "Q1/mediana/média/Q3 monotônicos sem ajuste (0 inversões); projeção >12m é suposição."),
 ])
 
 def interactive_slide(kicker, title, txt, chart_id):
@@ -249,7 +249,7 @@ SLIDES = "\n".join(slides)
 # ---------- 5. template ----------
 HTML = r"""<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="utf-8">
-<title>Risco de Desligamento — apresentação (esteira 2124)</title>
+<title>Risco de Desligamento — apresentação</title>
 <style>
   __FONTS__
   :root{ --navy:#14233f; --ink:#1b2430; --grey:#5b6675; }
