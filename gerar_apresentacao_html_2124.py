@@ -400,8 +400,10 @@ HTML = r"""<!DOCTYPE html>
   .ratechips .chip{width:26px;height:21px;border-radius:4px;border:1.5px solid var(--c);background:var(--c);color:#fff;font-size:11px;font-weight:700;cursor:pointer;padding:0;}
   .ratechips .chip.off{background:#fff;color:#bbb;border-color:#ddd;}
   #svg-rate{flex:1 1 auto;min-height:0;width:100%;}
-  .taxwrap{position:absolute;left:3%;right:3%;top:16%;bottom:4%;overflow:auto;}
-  .taxhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5em;gap:1em;}
+  .taxwrap{position:absolute;left:3%;right:3%;top:15.5%;bottom:4%;overflow:auto;
+           display:flex;flex-direction:column;justify-content:center;}
+  .taxhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:.55em;gap:1em;}
+  .taxwrap .aptbl{margin:0 auto;}   /* tabela centralizada horizontalmente */
   .taxbtn{background:#2c5f9e;color:#fff;border:none;border-radius:7px;padding:calc(var(--u)*0.4) calc(var(--u)*0.9);
           font-size:calc(var(--u)*1.0);font-weight:700;cursor:pointer;white-space:nowrap;}
   .taxbtn:hover{background:#f4a722;color:#14233f;}
