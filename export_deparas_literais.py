@@ -119,6 +119,58 @@ salva("depara_cnae_subclasse_literal.csv", ["cnae", "atividade"], planilha_codde
 salva("depara_cnae_classe_literal.csv",    ["cnae_classe", "atividade"], planilha_coddesc("classe 1.0 ou 95"))
 salva("depara_municipio_literal.csv",      ["municipio", "nome"], planilha_coddesc("municipio"))
 
+# ---------- 4) categoria do trabalhador (eSocial — Tabela 01; fora do layout 2020) ----------
+ESOCIAL_CATEGORIA = [
+    (101, "Empregado - Geral, inclusive o empregado público da administração direta ou indireta contratado pela CLT"),
+    (102, "Empregado - Trabalhador Rural por Pequeno Prazo da Lei 11.718/2008"),
+    (103, "Empregado - Aprendiz"),
+    (104, "Empregado - Doméstico"),
+    (105, "Empregado - contrato a termo firmado nos termos da Lei 9601/98"),
+    (106, "Trabalhador Temporário - contrato por prazo determinado nos termos da Lei 6019/74"),
+    (111, "Empregado - contrato de trabalho intermitente"),
+    (201, "Trabalhador Avulso Portuário"),
+    (202, "Trabalhador Avulso Não Portuário"),
+    (301, "Servidor Público Titular de Cargo Efetivo, Magistrado, Ministro/Conselheiro de TC e Membro do MP"),
+    (302, "Servidor Público Ocupante de Cargo exclusivo em comissão"),
+    (303, "Agente Político"),
+    (305, "Servidor Público indicado para conselho/órgão deliberativo (representante do governo/órgão público)"),
+    (306, "Servidor Público Temporário, sujeito a regime administrativo especial definido em lei própria"),
+    (307, "Militar efetivo"),
+    (308, "Conscrito"),
+    (309, "Agente Público - Outros"),
+    (401, "Dirigente Sindical - informação prestada pelo Sindicato"),
+    (410, "Trabalhador cedido - informação prestada pelo Cessionário"),
+    (701, "Contribuinte individual - Autônomo em geral"),
+    (711, "Contribuinte individual - Transportador autônomo de passageiros"),
+    (712, "Contribuinte individual - Transportador autônomo de carga"),
+    (721, "Contribuinte individual - Diretor não empregado, com FGTS"),
+    (722, "Contribuinte individual - Diretor não empregado, sem FGTS"),
+    (723, "Contribuinte individual - empresários, sócios e membro de conselho de administração ou fiscal"),
+    (731, "Contribuinte individual - Cooperado que presta serviços por intermédio de Cooperativa de Trabalho"),
+    (734, "Contribuinte individual - Transportador Cooperado (cooperativa de trabalho)"),
+    (738, "Contribuinte individual - Cooperado filiado a Cooperativa de Produção"),
+    (741, "Contribuinte individual - Microempreendedor Individual (MEI)"),
+    (751, "Contribuinte individual - magistrado classista temporário (Justiça do Trabalho/Eleitoral) aposentado"),
+    (761, "Contribuinte individual - Associado eleito para direção de cooperativa/associação/condomínio (com remuneração)"),
+    (771, "Contribuinte individual - Membro de conselho tutelar (Lei 8.069/1990)"),
+    (781, "Ministro de confissão religiosa ou membro de vida consagrada/congregação/ordem religiosa"),
+    (901, "Estagiário"),
+    (902, "Médico Residente"),
+    (903, "Bolsista, nos termos da lei 8958/1994"),
+    (904, "Participante de curso de formação (etapa de concurso público), sem vínculo de emprego/estatutário"),
+    (905, "Atleta não profissional em formação que receba bolsa"),
+]  # fonte: eSocial Tabela 01 (codCateg). Cobre os 11 códigos vistos em 2023-2025.
+salva("depara_categoria_trab_literal.csv", ["codigo", "categoria_esocial"],
+      [[str(c), d] for c, d in ESOCIAL_CATEGORIA])
+
+# ---------- 5) municipio -> UF (consolidado: prefixo IBGE -> sigla) ----------
+import sys
+sys.path.insert(0, ".")
+from src.cleaning import MAPA_UF_IBGE
+muni = planilha_coddesc("municipio")                      # [codigo, nome]
+salva("depara_municipio_uf.csv", ["municipio", "uf", "nome"],
+      [[cod, MAPA_UF_IBGE.get(cod[:2], "NI"), nome] for cod, nome in muni])
+
 print("Gerados em data/dicts/:")
 for nome, n in resumo:
     print(f"  {nome:42s} {n:>5} linhas")
