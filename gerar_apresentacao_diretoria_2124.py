@@ -27,6 +27,7 @@ TMP = "/tmp/apresentacao_consignado_diretoria_2124.html"
 MET = pd.read_csv("outputs/runpod_retreino_2124/metricas_por_ano.csv")
 ME = MET[MET.modelo == "ensemble"].set_index("ano")
 AUC25, KS25 = ME.loc[2025, "AUC"], ME.loc[2025, "KS"]
+def pct(v, nd=1): return f"{v*100:.{nd}f}%".replace(".", ",")
 
 # ======================= ESTILO =======================
 W, H = 13.33, 7.5
@@ -72,8 +73,8 @@ def capa():
     ax.text(0.06, 0.545, "Modelo sobre dados públicos (RAIS) · treinado em 2021–2024 · validado em 10 anos (743 mi de vínculos)",
             color="#c9d6e8", fontsize=13.5)
     cards = [("Faixas de risco", "14", "ordenadas em 10 safras"),
-             ("Discriminação", f"AUC {AUC25:.3f}", "2025 = futuro puro"),
-             ("Separação", f"KS {KS25:.3f}", "padrão de crédito"),
+             ("Discriminação", f"AUC {pct(AUC25)}", "2025 = futuro puro"),
+             ("Separação", f"KS {pct(KS25)}", "padrão de crédito"),
              ("Horizonte", "6–60 m", "prazo de referência")]
     for i, (k, v, s) in enumerate(cards):
         x = 0.06 + i * 0.225
@@ -125,7 +126,7 @@ def base_analitica():
         (True, "Machine learning (CatBoost) treinado em 2021–2024, SEM vazamento"),
         (None, "de informação do desfecho (auditoria de features)."),
         (True, "Avaliado em TODOS os anos 2016–2025; em 2025 — o futuro"),
-        (None, f"nunca visto — AUC {AUC25:.3f} e KS {KS25:.3f}."),
+        (None, f"nunca visto — AUC {pct(AUC25)} e KS {pct(KS25)}."),
         (False, "Qualidade comprovada"),
         (True, "Desempenho estável em 10 safras (inclusive na pandemia)"),
         (None, "e calibrado: risco previsto bate com o observado →"),

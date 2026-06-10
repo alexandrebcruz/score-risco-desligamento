@@ -31,6 +31,9 @@ PRAZO = pd.read_csv("outputs/tables/consignado_prazo_max_2124.csv")
 COB = pd.read_csv("outputs/tables/consignado_cobertura_parcelas_2124.csv")
 
 AUC25 = ME.loc[2025, "AUC"]; KS25 = ME.loc[2025, "KS"]
+def pct(v, nd=1):
+    """0.776 -> '77,6%' (AUC/KS exibidos em porcentagem, padrão pt-BR)."""
+    return f"{v*100:.{nd}f}%".replace(".", ",")
 
 # ---------- estilo ----------
 W, H = 13.33, 7.5
@@ -90,8 +93,8 @@ def capa():
     ax.text(0.06, 0.70, "Probabilidade de dispensa sem justa causa", color="white", fontsize=30, weight="bold")
     ax.text(0.06, 0.615, "Ensemble CatBoost treinado em 2021–2024 · sem vazamento de alvo · "
             "validado em 10 anos de RAIS (2016–2025)", color="#c9d6e8", fontsize=13.5)
-    cards = [("AUC (2025, futuro)", f"{AUC25:.3f}", "out-of-time puro"),
-             ("KS (2025)", f"{KS25:.3f}", "separação forte"),
+    cards = [("AUC (2025, futuro)", pct(AUC25), "out-of-time puro"),
+             ("KS (2025)", pct(KS25), "separação forte"),
              ("Categorias", "14", "ordenadas em 10 safras"),
              ("Base", "743 mi", "vínculos 2016–2025")]
     for i, (k, v, s) in enumerate(cards):
@@ -125,8 +128,8 @@ def contexto():
     ax.add_patch(FancyBboxPatch((0,0),1,1, boxstyle="round,pad=0.02", facecolor=LIGHT, linewidth=0))
     ax.text(0.5, 0.92, "Em números", ha="center", fontsize=14, weight="bold", color=NAVY)
     rows = [("Vínculos avaliados", "743 mi"), ("Treino (2021–24)", "319,7 mi"),
-            ("Features do modelo", "21"), ("AUC em 2025 (futuro)", f"{AUC25:.3f}"),
-            ("KS em 2025", f"{KS25:.3f}"), ("Categorias de risco", "14")]
+            ("Features do modelo", "21"), ("AUC em 2025 (futuro)", pct(AUC25)),
+            ("KS em 2025", pct(KS25)), ("Categorias de risco", "14")]
     for i, (k, v) in enumerate(rows):
         y = 0.80 - i * 0.118
         ax.text(0.07, y, k, fontsize=11, color=INK, va="center")
@@ -190,8 +193,8 @@ def ensemble():
         (True, "2016–2020 e 2025: totalmente fora do treino."),
         (True, "2025 = futuro puro (out-of-time)."),
         (False, "Resultado"),
-        (True, f"AUC {AUC25:.3f} · KS {KS25:.3f} em 2025"),
-        (True, "AUC 0,76–0,81 estável nos 10 anos"),
+        (True, f"AUC {pct(AUC25)} · KS {pct(KS25)} em 2025"),
+        (True, "AUC 76–81% estável nos 10 anos"),
     ], fs=12.2, dy=0.066)
     footer(fig, "4"); pages.append(fig)
 ensemble()
@@ -212,13 +215,15 @@ def desempenho():
         ax.axvspan(a0, a1, color="#dce6f2", alpha=0.6, zorder=0)
         ax.plot(anos, valores, color=cor, lw=2.4, marker="o", ms=5, zorder=3)
         for xx, vv in zip(anos, valores):
-            ax.annotate(f"{vv:.3f}", (xx, vv), textcoords="offset points", xytext=(0, 7),
+            ax.annotate(f"{vv*100:.1f}%".replace(".", ","), (xx, vv),
+                        textcoords="offset points", xytext=(0, 7),
                         ha="center", fontsize=7.6, color=INK)
         ax.set_ylim(ylo, yhi); ax.set_xlim(anos.min() - 0.4, anos.max() + 0.4)
         ax.set_xticks(anos); ax.tick_params(labelsize=8.5)
         if not xlab: ax.set_xticklabels([])
-        _fmt = lambda v: f"{v:g}".replace(".", ",")
-        ax.set_title(f"{nome} por ano  (eixo y: {_fmt(ylo)}–{_fmt(yhi)})",
+        from matplotlib.ticker import FuncFormatter
+        ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v*100:.0f}%"))
+        ax.set_title(f"{nome} por ano  (eixo y: {ylo*100:.0f}%–{yhi*100:.0f}%)",
                      fontsize=11.5, weight="bold", loc="left", color=INK)
         ax.grid(axis="y", alpha=.3)
         for s in ("top", "right"): ax.spines[s].set_visible(False)
@@ -436,8 +441,8 @@ def fecho():
     ax.add_patch(Rectangle((0,0),1,1,color=NAVY))
     ax.add_patch(Rectangle((0.06,0.70),0.18,0.01,color="#f4a722"))
     ax.text(0.06, 0.78, "Síntese", color="white", fontsize=30, weight="bold")
-    pts = [f"Ensemble treinado em 2021–24, SEM vazamento de alvo: AUC {AUC25:.3f} e KS {KS25:.3f} no futuro puro (2025).",
-           "Desempenho estável em 10 safras (AUC 0,76–0,81), incluindo a pandemia — generaliza p/ trás e p/ frente.",
+    pts = [f"Ensemble treinado em 2021–24, SEM vazamento de alvo: AUC {pct(AUC25)} e KS {pct(KS25)} no futuro puro (2025).",
+           "Desempenho estável em 10 safras (AUC 76–81%), incluindo a pandemia — generaliza p/ trás e p/ frente.",
            "14 categorias ótimas por ganho de informação, com ordenação validada DENTRO de cada ano (2016–2025).",
            "Personas: do servidor público (0,6%) ao operário da construção em micro construtora (71,5%).",
            "Sobrevivência MOB (ref. 2021–24) alimenta a política de prazos do consignado (apêndices B e C)."]

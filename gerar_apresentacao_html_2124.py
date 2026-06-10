@@ -75,6 +75,60 @@ GROUPS = [("Mínimo", [1], "#1a9850"), ("Baixo", [2, 3, 4], "#86cb66"),
           ("Alto", [11, 12, 13, 14], "#d73027")]
 GROUPS_JSON = json.dumps([{"nome": n, "cats": c, "cor": col} for n, c, col in GROUPS], ensure_ascii=False)
 
+# ---------- dados do slide de FEATURES (importância clicável, layout do deck anterior) ----------
+_imp = pd.read_csv("outputs/runpod_retreino_2124/importancia_ensemble.csv").sort_values("imp_ensemble", ascending=False)
+IMP_JSON = json.dumps([{"f": r.feature, "imp": round(float(r.imp_ensemble), 2)} for r in _imp.itertuples()], ensure_ascii=False)
+FEATINFO = {
+ "tempo_vinculo_meses": {"curto": "Tempo de vínculo", "nome": "Tempo de vínculo na ENTRADA (meses)",
+   "desc": "Antiguidade do vínculo medida na ENTRADA da janela de observação (leak-free): não usa a data do desligamento. Vínculos novos têm risco muito maior.",
+   "ex": ["Numérico, em meses", "Ex.: 0 (recém-admitido), 12, 60, 120"]},
+ "cbo": {"curto": "CBO-6", "nome": "CBO — ocupação (6 dígitos)", "desc": "Código completo da ocupação.",
+   "ex": ["715210 = Pedreiro", "517330 = Porteiro", "521110 = Vendedor de comércio varejista"]},
+ "cbo4": {"curto": "CBO-4", "nome": "CBO — família ocupacional (4 dígitos)", "desc": "Ocupação no nível de família.",
+   "ex": ["7152 = pedreiros", "5173 = vigias/porteiros", "4110 = auxiliares de escritório"]},
+ "cbo2": {"curto": "CBO-2", "nome": "CBO — subgrupo principal (2 dígitos)", "desc": "Ocupação no nível de subgrupo.",
+   "ex": ["51 = serviços / 52 = vendas no comércio", "71 = construção civil e extração"]},
+ "cbo1": {"curto": "CBO-1", "nome": "CBO — grande grupo (1 dígito)", "desc": "Ocupação no nível mais agregado.",
+   "ex": ["2 = profissionais das ciências", "5 = serviços e vendas", "7 = produção de bens (indústria/obra)"]},
+ "cnae": {"curto": "CNAE-7", "nome": "CNAE — subclasse (completo)", "desc": "Código completo da atividade econômica do empregador.",
+   "ex": ["4120400 = Construção de edifícios", "4711301 = Hipermercados"]},
+ "cnae5": {"curto": "CNAE-5", "nome": "CNAE — classe (5 dígitos)", "desc": "Atividade no nível de classe.",
+   "ex": ["41204 = Construção de edifícios", "47113 = Comércio varejista"]},
+ "cnae3": {"curto": "CNAE-3", "nome": "CNAE — grupo (3 dígitos)", "desc": "Atividade no nível de grupo.",
+   "ex": ["412 = Construção de edifícios", "471 = Comércio varejista não especializado"]},
+ "cnae2": {"curto": "CNAE-2", "nome": "CNAE — divisão (2 dígitos)", "desc": "Atividade no nível de divisão.",
+   "ex": ["41/42 = Construção", "47 = Comércio varejista", "56 = Alimentação", "84 = Administração pública"]},
+ "uf": {"curto": "UF", "nome": "UF (Unidade da Federação)", "desc": "Estado do vínculo (derivado do município).",
+   "ex": ["SP, MG, RJ, BA, RS…"]},
+ "tipo_vinculo": {"curto": "Tipo de vínculo", "nome": "Tipo de vínculo", "desc": "Natureza jurídica do contrato de trabalho (RAIS).",
+   "ex": ["10/15/20/25 = CLT prazo indeterminado", "30/31/35 = estatutário (servidor)", "50/55/60/65 = temporário / determinado"]},
+ "natureza_juridica": {"curto": "Nat. jurídica", "nome": "Natureza jurídica do empregador", "desc": "Tipo jurídico da empresa/órgão (CONCLA).",
+   "ex": ["2062 = Sociedade Ltda.", "2135 = Empresário individual", "1031 = Órgão público municipal"]},
+ "natureza_setor": {"curto": "Nat. setor", "nome": "Natureza do setor", "desc": "1º dígito da natureza jurídica: distingue público de privado.",
+   "ex": ["1 = setor público", "2 = privado", "3 = sem fins lucrativos"]},
+ "intermitente": {"curto": "Intermitente", "nome": "Contrato intermitente", "desc": "Se o vínculo é de trabalho intermitente.",
+   "ex": ["1 = sim", "0 = não", "-1 = não existia (2016)"]},
+ "simples": {"curto": "Simples", "nome": "Optante pelo Simples Nacional", "desc": "Se o empregador é optante do Simples.",
+   "ex": ["1 = sim", "0 = não"]},
+ "idade": {"curto": "Idade", "nome": "Idade (anos)", "desc": "Idade da pessoa.", "ex": ["Ex.: 18, 30, 45, 60"]},
+ "qtd_dias_afastamento": {"curto": "Afast./mês", "nome": "Dias de afastamento POR MÊS observado",
+   "desc": "Taxa de afastamento normalizada pela exposição (leak-free): dias afastado ÷ meses observados no ano.",
+   "ex": ["Numérico (dias/mês)", "Ex.: 0; 0,5; 2,3"]},
+ "escolaridade": {"curto": "Escolaridade", "nome": "Escolaridade (grau de instrução, NUMÉRICA)",
+   "desc": "Código ordinal 1–11 tratado como numérico — a ordem carrega o sinal.",
+   "ex": ["1 = analfabeto … 5 = fundamental", "7 = médio completo", "9 = superior completo", "10/11 = mestrado/doutorado"]},
+ "tamanho_estab": {"curto": "Tamanho estab.", "nome": "Tamanho do estabelecimento (NUMÉRICA)",
+   "desc": "Faixa ordinal 1–10 de nº de vínculos do estabelecimento (porte).",
+   "ex": ["2 = 1 a 4", "5 = 20 a 49", "10 = 1000 ou mais"]},
+ "faixa_remuneracao": {"curto": "Remuneração", "nome": "Faixa de remuneração média (SM, NUMÉRICA)",
+   "desc": "Faixa ordinal 0–11 do salário em salários mínimos; 99 (ignorado) vira -1.",
+   "ex": ["0–2 = até 1,5 SM", "3–7 = 1,5 a 7 SM", "8–11 = acima de 7 SM"]},
+ "faixa_horas": {"curto": "Horas", "nome": "Faixa de horas contratadas (NUMÉRICA)",
+   "desc": "Faixa ordinal 1–6 da jornada semanal; 99 (ignorado) vira -1.",
+   "ex": ["6 = 41–44h (integral)", "4 = 21–30h (parcial)"]},
+}
+FEATINFO_JSON = json.dumps(FEATINFO, ensure_ascii=False)
+
 # fonte DejaVu embutida
 _TTF = os.path.join(matplotlib.get_data_path(), "fonts", "ttf")
 def _face(fname, weight):
@@ -122,6 +176,14 @@ def interactive_slide(kicker, title, txt, chart_id):
   </div>
 </div>'''
 
+def features_slide():
+    return """<div class="slide cust">
+  <div class="hb"><span class="kick">DESENVOLVIMENTO · FEATURES</span><span class="ttl">As 21 variáveis do modelo — importância e significado</span></div>
+  <div class="featinfo" id="featinfo"><div class="fi-h">Importância das variáveis</div><div class="fi-d">Clique numa barra ao lado para ver o que é a variável e exemplos de valores.</div></div>
+  <div class="impwrap"><svg id="svg-imp" viewBox="0 0 560 470" preserveAspectRatio="xMidYMid meet"></svg></div>
+  <div class="leaknote"><b>Base leak-free:</b> tempo de vínculo medido na ENTRADA da janela · afastamento em dias POR MÊS de exposição · causa de afastamento removida · ordinais (escolaridade, porte, faixas) como numéricas (99 → -1).</div>
+</div>"""
+
 def box_slide():
     return '''<div class="slide cust">
   <div class="hb"><span class="kick">TEMPO ATÉ O DESLIGAMENTO · ESTATÍSTICAS</span><span class="ttl">Q1, mediana, média e Q3 por categoria — MOB, ref. 2021–2024 (meses)</span></div>
@@ -165,9 +227,12 @@ def consig_tables_slide():
             '<div class="apt-note">Σ S(m)/T · S = KM MOB (≤12) + Weibull (&gt;12) · ref. 2021–2024 · &gt;12m é projeção</div></div></div>')
 
 # ---------- 4. monta os slides ----------
+PREPARO = 2          # slide leak-free do PDF -> no HTML vira feature importance interativo
 slides = []
 for i in range(NP):
-    if i == B1:
+    if i == PREPARO:
+        slides.append(features_slide())
+    elif i == B1:
         slides.append(interactive_slide("TEMPO ATÉ O DESLIGAMENTO · SOBREVIVÊNCIA",
                       "Curvas de sobrevivência por categoria — MOB, ref. 2021–2024 (Kaplan-Meier)", B1_TXT, "km"))
     elif i == B2:
@@ -227,6 +292,19 @@ HTML = r"""<!DOCTYPE html>
   .boxtable tr.hl td{background:#fff3cf;}
   .boxtable tr.hl td.ct{filter:brightness(.85);}
   .boxhint{position:absolute;left:2%;bottom:2.5%;color:var(--grey);font-size:calc(var(--u)*0.9);}
+  /* slide de features: importância clicável + box de detalhes (layout do deck anterior) */
+  .featinfo{position:absolute;left:2.5%;top:18%;width:34%;max-height:62%;overflow:auto;z-index:6;
+            background:rgba(255,255,255,.97);border:1px solid #cdd5df;border-radius:8px;
+            padding:calc(var(--u)*0.9);box-shadow:0 3px 14px rgba(0,0,0,.20);}
+  .featinfo .fi-h{font-weight:700;font-size:calc(var(--u)*1.25);color:var(--navy);margin-bottom:.35em;}
+  .featinfo .fi-d{font-size:calc(var(--u)*1.02);color:var(--ink);line-height:1.45;}
+  .featinfo .fi-ex{margin-top:.5em;font-size:calc(var(--u)*0.98);padding-left:1.2em;}
+  .featinfo .fi-ex li{margin:.18em 0;color:#33404f;}
+  .impwrap{position:absolute;left:40%;top:15.5%;width:58%;height:80%;}
+  .impwrap svg{width:100%;height:100%;}
+  .imp-bar{cursor:pointer;}
+  .leaknote{position:absolute;left:2.5%;bottom:3%;width:34%;font-size:calc(var(--u)*0.85);
+            color:var(--grey);line-height:1.45;}
   .aptwrap-l{position:absolute;left:2%;top:15.5%;width:31%;height:80%;overflow:auto;display:flex;flex-direction:column;justify-content:center;}
   .aptwrap-r{position:absolute;left:35%;top:15.5%;width:63%;height:80%;overflow:auto;display:flex;flex-direction:column;justify-content:center;}
   .apt-h{font-weight:700;font-size:calc(var(--u)*1.0);color:var(--navy);margin-bottom:.35em;line-height:1.2;}
@@ -257,6 +335,7 @@ __SLIDES__
 <div id="tip"></div>
 <script>
 const DATA=__DATA__, GROUPS=__GROUPS__;
+const IMP=__IMP__, FEATINFO=__FEATINFO__;
 const slides=[...document.querySelectorAll('.slide')]; let cur=0;
 const counter=document.getElementById('counter');
 function show(n){ cur=Math.max(0,Math.min(slides.length-1,n));
@@ -383,11 +462,39 @@ function makeBoxChart(){
   }
 }
 makeBoxChart();
+
+/* ---------- slide de features: importância clicável (layout do deck anterior) ---------- */
+function makeImp(){
+  const svg=document.getElementById('svg-imp'); if(!svg) return;
+  const NS='http://www.w3.org/2000/svg', W=560,HT=470,M={l:96,r:44,t:8,b:10},PW=W-M.l-M.r,PH=HT-M.t-M.b;
+  const n=IMP.length, maxImp=IMP[0].imp, barH=PH/n, bars={}; let sel=null;
+  function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+  function selFeat(f){
+    if(sel&&bars[sel]) bars[sel].querySelector('.ib').setAttribute('fill','#3b7dba');
+    sel=f; if(bars[f]) bars[f].querySelector('.ib').setAttribute('fill','#14233f');
+    const info=FEATINFO[f]||{}, box=document.getElementById('featinfo');
+    const ex=(info.ex||[]).map(e=>'<li>'+e+'</li>').join('');
+    box.innerHTML='<div class="fi-h">'+(info.nome||f)+'</div><div class="fi-d">'+(info.desc||'')+'</div>'+(ex?'<ul class="fi-ex">'+ex+'</ul>':'');
+  }
+  IMP.forEach((d,i)=>{ const y=M.t+i*barH, h=barH*0.74, len=d.imp/maxImp*PW, lab=(FEATINFO[d.f]||{}).curto||d.f;
+    const g=el('g',{class:'imp-bar','data-f':d.f});
+    g.appendChild(el('rect',{x:M.l,y:y,width:Math.max(len,0.5),height:h,fill:'#3b7dba',rx:2,class:'ib'}));
+    const tl=el('text',{x:M.l-5,y:y+h/2+3,'text-anchor':'end','font-size':9.5,fill:'#1b2430'}); tl.textContent=lab; svg.appendChild(tl);
+    const tv=el('text',{x:M.l+len+4,y:y+h/2+3,'font-size':9,fill:'#5b6675'}); tv.textContent=d.imp.toFixed(1)+'%'; svg.appendChild(tv);
+    g.appendChild(el('rect',{x:M.l,y:y,width:PW,height:h,fill:'transparent'}));
+    g.addEventListener('click',()=>selFeat(d.f));
+    g.addEventListener('mouseenter',()=>{ if(sel!==d.f) g.querySelector('.ib').setAttribute('fill','#2c5f9e'); });
+    g.addEventListener('mouseleave',()=>{ if(sel!==d.f) g.querySelector('.ib').setAttribute('fill','#3b7dba'); });
+    bars[d.f]=g; svg.appendChild(g); });
+  selFeat(IMP[0].f);
+}
+makeImp();
 </script>
 </body></html>"""
 
 HTML = (HTML.replace("__FONTS__", FONTS).replace("__SLIDES__", SLIDES)
-            .replace("__DATA__", DATA).replace("__GROUPS__", GROUPS_JSON))
+            .replace("__DATA__", DATA).replace("__GROUPS__", GROUPS_JSON)
+            .replace("__IMP__", IMP_JSON).replace("__FEATINFO__", FEATINFO_JSON))
 with open(TMP, "w", encoding="utf-8") as f:
     f.write(HTML)
 shutil.copy(TMP, OUT)
