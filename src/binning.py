@@ -71,7 +71,7 @@ def add_bins(df: pd.DataFrame, cfg: dict | None = None) -> pd.DataFrame:
     """
     cfg = cfg or load_config()
     out = df.copy()
-    out["tempo_faixa"] = bin_tempo_vinculo(out["tempo_vinculo_meses"], cfg).astype(str)
+    out["tempo_faixa"] = bin_tempo_vinculo(out["tempo_vinculo_meses_inicio"], cfg).astype(str)
     out["idade_faixa"] = bin_idade(out["idade"], cfg).astype(str)
     out["escol_faixa"] = bin_escolaridade(out["escolaridade"]).values
     out["tamanho_faixa"] = bin_tamanho(out["tamanho_estab"], cfg).astype(str)

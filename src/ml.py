@@ -7,7 +7,7 @@ para treinar um classificador individual. Aqui:
 - compara com o score de células (rates) nas MESMAS métricas e conjunto de teste.
 
 Features: categóricas de alta cardinalidade tratadas nativamente pelo CatBoost.
-NUNCA usar como feature: vinculo_ativo, mes_deslig, motivo_unificado, separado
+NUNCA usar como feature: vinculo_ativo, mes_deslig, motivo_desligamento, motivo_unificado
 (são o desfecho — vazamento).
 """
 from __future__ import annotations
@@ -24,7 +24,7 @@ EXTRA_CAT = ["tipo_vinculo", "faixa_remuneracao", "natureza_juridica", "natureza
              "intermitente", "simples", "faixa_horas", "causa_afastamento"]
 # Colunas lidas direto dos microdados (interim)
 COLS_RAW = (["cbo", "cnae", "uf", "escolaridade", "tamanho_estab",
-             "idade", "tempo_vinculo_meses", "qtd_dias_afastamento"] + EXTRA_CAT)
+             "idade", "tempo_vinculo_meses_inicio", "qtd_dias_afastamento"] + EXTRA_CAT)
 
 # Prefixos hierárquicos derivados (agregadores naturais dos códigos):
 #  CBO 2002 (6 díg): 1=grande grupo, 2=subgrupo principal, 4=família.
@@ -35,7 +35,7 @@ CNAE_NIVEIS = {"cnae2": 2, "cnae3": 3, "cnae5": 5}
 # Features do modelo: código completo + prefixos agregadores + demais categóricas.
 FEATURES_CAT = (["cbo", "cbo4", "cbo2", "cbo1", "cnae", "cnae5", "cnae3", "cnae2"]
                 + ["uf", "escolaridade", "tamanho_estab"] + EXTRA_CAT)
-FEATURES_NUM = ["idade", "tempo_vinculo_meses", "qtd_dias_afastamento"]
+FEATURES_NUM = ["idade", "tempo_vinculo_meses_inicio", "qtd_dias_afastamento"]
 FEATURES = FEATURES_CAT + FEATURES_NUM
 
 

@@ -26,11 +26,11 @@ os.makedirs(OUT, exist_ok=True)
 EXTRA_CAT = ["tipo_vinculo", "faixa_remuneracao", "natureza_juridica", "natureza_setor",
              "intermitente", "simples", "faixa_horas", "causa_afastamento"]
 RAW = (["cbo", "cnae", "uf", "escolaridade", "tamanho_estab",
-        "idade", "tempo_vinculo_meses", "qtd_dias_afastamento", "motivo_unificado"]
+        "idade", "tempo_vinculo_meses_inicio", "qtd_dias_afastamento", "motivo_unificado"]
        + EXTRA_CAT)
 CAT = (["cbo", "cbo4", "cbo2", "cbo1", "cnae", "cnae5", "cnae3", "cnae2",
         "uf", "escolaridade", "tamanho_estab"] + EXTRA_CAT)
-NUM = ["idade", "tempo_vinculo_meses", "qtd_dias_afastamento"]
+NUM = ["idade", "tempo_vinculo_meses_inicio", "qtd_dias_afastamento"]
 FEATURES = CAT + NUM
 TARGET_MOTIVO = "involuntario_sjc"
 HOLDOUT_ANO = 2023

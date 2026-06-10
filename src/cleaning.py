@@ -1,17 +1,17 @@
 """Limpeza, padronização e harmonização RAIS x CAGED para um schema comum.
 
 Schema canônico de saída (uma linha por vínculo/movimentação):
-    ano, fonte, cbo, cnae, uf, idade, escolaridade, tamanho_estab,
-    tempo_vinculo_meses, vinculo_ativo, mes_deslig,
-    motivo_unificado, separado
+    ... features ..., tempo_vinculo_meses_inicio, ...,
+    (DESFECHO, no final, nunca-feature) vinculo_ativo, mes_deslig, motivo_unificado
 
-`motivo_unificado` ∈ MOTIVOS (config) ou "ativo" quando não houve desligamento.
-`separado` é booleano (houve desligamento no período).
+`motivo_unificado` ∈ MOTIVOS (config) ou "ativo" quando não houve desligamento
+(vinculo_ativo==1). Não há mais coluna `separado` (== vinculo_ativo==0).
 
 Decisões:
 - Códigos crus de motivo (RAIS e CAGED usam tabelas parecidas) são mapeados
   para categorias unificadas via MAPA_MOTIVO.
-- Escolaridade (grau de instrução) é colapsada em faixas canônicas ordenadas.
+- Escolaridade e faixas curtas guardam o CÓDIGO CRU (int64); o agrupamento,
+  quando necessário (personas), é feito na leitura.
 - CBO/CNAE são normalizados como string e derivados em níveis (4/2 dígitos)
   em src/cells.py (não aqui), para manter responsabilidades separadas.
 """
@@ -301,9 +301,20 @@ def clean_rais_real(df_bruto: pd.DataFrame, regiao: str | None = None) -> pd.Dat
     OFICIAL da RAIS (MAPA_MOTIVO_RAIS) e a UF já derivada do município.
     """
     df = df_bruto.copy()
-    separado = df["vinculo_ativo_3112"].astype(int) == 0
+    _ativo = df["vinculo_ativo_3112"].astype(int)
+    _msdes = pd.to_numeric(df["mes_desligamento"], errors="coerce").fillna(0).astype(int)
+    _msadm = (pd.to_numeric(df["mes_admissao"], errors="coerce").fillna(0).astype(int)
+              if "mes_admissao" in df.columns else pd.Series(0, index=df.index, dtype="int64"))
+    _tempo = pd.to_numeric(df["tempo_emprego_meses"], errors="coerce")
+    # Antiguidade LEAK-FREE: tempo no INÍCIO da janela de observação (relógio MOB). O
+    # "tempo de emprego" da RAIS é medido no FIM do vínculo (data do desligamento p/ quem
+    # saiu), o que vaza o "quando" do alvo. Subtraímos os meses observados no ano (da
+    # entrada até o desligamento, ou até 31/12 se ativo) -> antiguidade comum a ativos e
+    # desligados, sem vazamento.
+    _ref = np.where(_ativo.values == 0, _msdes.values, 12)                              # mês da medição
+    _entry = np.where((_msadm.values >= 1) & (_msadm.values <= 12), _msadm.values, 0)   # entrada na janela
+    _tempo_inicio = (_tempo - (_ref - _entry)).clip(lower=0)
     # ID posicional ÚNICO: ano_regiao_nº-da-linha-no-arquivo (0-based, ordem do RAW).
-    # __row vem de iter_rais_clean_chunks; fallback p/ chamadas avulsas sem __row.
     _row = (df["__row"].astype("int64") if "__row" in df.columns
             else pd.Series(range(len(df)), index=df.index)).astype(str)
     _reg = str(regiao) if regiao is not None else "NA"
@@ -318,7 +329,7 @@ def clean_rais_real(df_bruto: pd.DataFrame, regiao: str | None = None) -> pd.Dat
         "idade": pd.to_numeric(df["idade"], errors="coerce"),
         "escolaridade": _raw_int(df["grau_instrucao"]),           # int64: código CRU 1..11 (-1=ign.)
         "tamanho_estab": pd.to_numeric(df["tamanho_estab"], errors="coerce"),
-        "tempo_vinculo_meses": pd.to_numeric(df["tempo_emprego_meses"], errors="coerce"),
+        "tempo_vinculo_meses_inicio": _tempo_inicio,              # antiguidade no início (leak-free)
         # --- enriquecimento (features) ---
         "tipo_vinculo": df["tipo_vinculo"].astype(str).str.strip(),
         "categoria_trab": df["categoria_trab"].astype(str).str.strip(),
@@ -332,18 +343,16 @@ def clean_rais_real(df_bruto: pd.DataFrame, regiao: str | None = None) -> pd.Dat
         "faixa_horas": _raw_int(df["faixa_horas"]),               # int64
         "causa_afastamento": df["causa_afastamento"].astype(str).str.strip(),
         "qtd_dias_afastamento": pd.to_numeric(df["qtd_dias_afastamento"], errors="coerce").fillna(0),
-        # --- desfecho / alvo (no FINAL das colunas) ---
+        # --- desfecho / alvo (no FINAL; NUNCA usar como feature) ---
         # 0 = vínculo admitido em ano anterior (vigente no início do ano); 1-12 = mês de admissão no ano
-        "mes_admissao": (pd.to_numeric(df["mes_admissao"], errors="coerce").fillna(0).astype(int)
-                         if "mes_admissao" in df.columns else 0),
-        "vinculo_ativo": df["vinculo_ativo_3112"].astype(int),
-        "mes_deslig": pd.to_numeric(df["mes_desligamento"], errors="coerce").fillna(0).astype(int),
+        "mes_admissao": _msadm,
+        "vinculo_ativo": _ativo,
+        "mes_deslig": _msdes,
         # código CRU do motivo de desligamento; o ALVO (motivo_unificado) é derivado dele:
         "motivo_desligamento": pd.to_numeric(df["motivo_desligamento"], errors="coerce").fillna(0).astype(int),
         "motivo_unificado": df["motivo_desligamento"].map(MAPA_MOTIVO_RAIS).fillna("outros"),  # ALVO
-        "separado": separado,
     })
-    out.loc[~out["separado"], "motivo_unificado"] = "ativo"
+    out.loc[out["vinculo_ativo"] == 1, "motivo_unificado"] = "ativo"   # não-separado -> "ativo"
     # Harmoniza zero-padding de códigos curtos entre layouts de ano (ver acima).
     out = normalize_short_codes(out)
     return out
@@ -366,7 +375,11 @@ def _raw_int(s: pd.Series, missing: int = -1) -> pd.Series:
 def clean_rais(df_raw: pd.DataFrame) -> pd.DataFrame:
     """Padroniza um lote bruto de vínculos RAIS para o schema canônico."""
     df = df_raw.copy()
-    separado = df["vinculo_ativo_3112"].astype(int) == 0
+    _ativo = df["vinculo_ativo_3112"].astype(int)
+    _msdes = pd.to_numeric(df["mes_desligamento"], errors="coerce").fillna(0).astype(int)
+    _tempo = pd.to_numeric(df["tempo_emprego_meses"], errors="coerce")
+    _ref = np.where(_ativo.values == 0, _msdes.values, 12)     # entrada=0 (sintético: sem mes_admissao)
+    _tempo_inicio = (_tempo - _ref).clip(lower=0)              # antiguidade no início (leak-free)
     out = pd.DataFrame({
         "ano": df["ano"].astype(int),
         "fonte": "RAIS",
@@ -377,14 +390,14 @@ def clean_rais(df_raw: pd.DataFrame) -> pd.DataFrame:
         "idade": pd.to_numeric(df["idade"], errors="coerce"),
         "escolaridade": _raw_int(df["grau_instrucao"]),   # código CRU, sem agrupar
         "tamanho_estab": pd.to_numeric(df["tamanho_estab"], errors="coerce"),
-        "tempo_vinculo_meses": pd.to_numeric(df["tempo_emprego_meses"], errors="coerce"),
-        "vinculo_ativo": df["vinculo_ativo_3112"].astype(int),
-        "mes_deslig": pd.to_numeric(df["mes_desligamento"], errors="coerce").fillna(0).astype(int),
+        "tempo_vinculo_meses_inicio": _tempo_inicio,
+        # --- desfecho / alvo (NUNCA usar como feature) ---
+        "vinculo_ativo": _ativo,
+        "mes_deslig": _msdes,
         "motivo_unificado": _map_motivo(df["motivo_desligamento"]),
-        "separado": separado,
     })
-    # Quando ativo, força motivo "ativo" (consistência).
-    out.loc[~out["separado"], "motivo_unificado"] = "ativo"
+    # Quando ativo (vinculo_ativo==1), força motivo "ativo" (consistência).
+    out.loc[out["vinculo_ativo"] == 1, "motivo_unificado"] = "ativo"
     return out
 
 
@@ -393,7 +406,7 @@ def clean_caged(df_raw: pd.DataFrame) -> pd.DataFrame:
 
     No CAGED cada linha é uma movimentação; aqui mantemos apenas a informação
     necessária para fluxos: admissões (saldo +1) e desligamentos (saldo -1).
-    `tempo_vinculo_meses` não vem no CAGED de forma direta -> NaN (tratado no
+    `tempo_vinculo_meses_inicio` não vem no CAGED de forma direta -> NaN (tratado no
     cálculo de taxas, que para o componente recente agrega sem essa dimensão).
     """
     df = df_raw.copy()
@@ -409,11 +422,10 @@ def clean_caged(df_raw: pd.DataFrame) -> pd.DataFrame:
         "idade": pd.to_numeric(df["idade"], errors="coerce"),
         "escolaridade": _raw_int(df["grau_instrucao"]),   # código CRU, sem agrupar
         "tamanho_estab": pd.to_numeric(df["tamanho_estab"], errors="coerce"),
-        "tempo_vinculo_meses": np.nan,
+        "tempo_vinculo_meses_inicio": np.nan,
         "saldo": df["saldomovimentacao"].astype(int),
         "motivo_unificado": np.where(
             desligamento, _map_motivo(df["motivo_desligamento"]), "admissao"),
-        "separado": desligamento,
     })
     return out
 
