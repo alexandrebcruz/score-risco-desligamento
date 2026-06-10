@@ -259,7 +259,7 @@ def read_rais_comt(path, ano: int, chunksize: int = 500_000,
 # (2019-2022 vêm zero-padded: '02','03'; 2023 vem sem padding: '2','3').
 # Sem normalizar, '02' (treino) != '2' (holdout) -> categoria desconhecida em 2023
 # e o join de lag por valor falha. Normalizamos removendo zeros à esquerda.
-CODIGOS_A_NORMALIZAR = ["faixa_remuneracao", "faixa_horas", "causa_afastamento"]
+CODIGOS_A_NORMALIZAR = ["causa_afastamento"]   # faixa_remuneracao/faixa_horas agora int64 (zfill some na conversão)
 
 # Remapeamentos de CONTEÚDO (não-formato) entre layouts de ano. Aplicados ANTES
 # do strip de zeros. Ex.: em causa_afastamento a categoria default "sem afastamento"
@@ -311,36 +311,37 @@ def clean_rais_real(df_bruto: pd.DataFrame, regiao: str | None = None) -> pd.Dat
         "id_linha": df["ano"].astype(str) + "_" + _reg + "_" + _row,
         "ano": df["ano"].astype(int),
         "fonte": "RAIS",
-        # zfill já no interim p/ padrão único entre anos (5->6 díg. etc.); idempotente downstream
+        # zfill já no interim p/ padrão único entre anos (5->6 díg.); idempotente downstream
         "cbo": df["cbo"].astype(str).str.strip().str.zfill(6),
         "cnae": df["cnae"].astype(str).str.strip().str.zfill(7),
         "uf": df["uf"].astype(str).str.upper().str.strip(),
         "idade": pd.to_numeric(df["idade"], errors="coerce"),
-        "escolaridade": _raw_grau_instrucao(df["grau_instrucao"]),   # código CRU (1..11), sem agrupar
+        "escolaridade": _raw_int(df["grau_instrucao"]),           # int64: código CRU 1..11 (-1=ign.)
         "tamanho_estab": pd.to_numeric(df["tamanho_estab"], errors="coerce"),
         "tempo_vinculo_meses": pd.to_numeric(df["tempo_emprego_meses"], errors="coerce"),
-        "vinculo_ativo": df["vinculo_ativo_3112"].astype(int),
-        "mes_deslig": pd.to_numeric(df["mes_desligamento"], errors="coerce").fillna(0).astype(int),
-        # 0 = vínculo admitido em ano anterior (vigente no início do ano); 1-12 = mês de admissão no ano
-        "mes_admissao": (pd.to_numeric(df["mes_admissao"], errors="coerce").fillna(0).astype(int)
-                         if "mes_admissao" in df.columns else 0),
-        # código CRU do motivo de desligamento (sem agrupar); o ALVO é derivado dele:
-        "motivo_desligamento": pd.to_numeric(df["motivo_desligamento"], errors="coerce").fillna(0).astype(int),
-        "motivo_unificado": df["motivo_desligamento"].map(MAPA_MOTIVO_RAIS).fillna("outros"),  # ALVO/censura
-        "separado": separado,
-        # --- variáveis adicionais (enriquecimento) ---
+        # --- enriquecimento (features) ---
         "tipo_vinculo": df["tipo_vinculo"].astype(str).str.strip(),
         "categoria_trab": df["categoria_trab"].astype(str).str.strip(),
-        "faixa_remuneracao": df["faixa_remuneracao"].astype(str).str.strip(),
+        "faixa_remuneracao": _raw_int(df["faixa_remuneracao"]),   # int64 (zfill some na conversão)
         "natureza_juridica": df["natureza_juridica"].astype(str).str.strip(),
         # setor: 1º dígito da natureza jurídica (1=público, 2=privado, 3=outros)
         "natureza_setor": df["natureza_juridica"].astype(str).str.strip().str[:1],
-        "intermitente": df["intermitente"].astype(str).str.strip(),
-        "parcial": df["parcial"].astype(str).str.strip(),
-        "simples": df["simples"].astype(str).str.strip(),
-        "faixa_horas": df["faixa_horas"].astype(str).str.strip(),
+        "intermitente": _raw_int(df["intermitente"]),             # int64 (0/1; -1=ausente)
+        "parcial": _raw_int(df["parcial"]),                       # int64 (0/1; -1=ausente)
+        "simples": _raw_int(df["simples"]),                       # int64 (0/1; -1=ausente)
+        "faixa_horas": _raw_int(df["faixa_horas"]),               # int64
         "causa_afastamento": df["causa_afastamento"].astype(str).str.strip(),
         "qtd_dias_afastamento": pd.to_numeric(df["qtd_dias_afastamento"], errors="coerce").fillna(0),
+        # --- desfecho / alvo (no FINAL das colunas) ---
+        # 0 = vínculo admitido em ano anterior (vigente no início do ano); 1-12 = mês de admissão no ano
+        "mes_admissao": (pd.to_numeric(df["mes_admissao"], errors="coerce").fillna(0).astype(int)
+                         if "mes_admissao" in df.columns else 0),
+        "vinculo_ativo": df["vinculo_ativo_3112"].astype(int),
+        "mes_deslig": pd.to_numeric(df["mes_desligamento"], errors="coerce").fillna(0).astype(int),
+        # código CRU do motivo de desligamento; o ALVO (motivo_unificado) é derivado dele:
+        "motivo_desligamento": pd.to_numeric(df["motivo_desligamento"], errors="coerce").fillna(0).astype(int),
+        "motivo_unificado": df["motivo_desligamento"].map(MAPA_MOTIVO_RAIS).fillna("outros"),  # ALVO
+        "separado": separado,
     })
     out.loc[~out["separado"], "motivo_unificado"] = "ativo"
     # Harmoniza zero-padding de códigos curtos entre layouts de ano (ver acima).
@@ -356,11 +357,10 @@ def _map_escolaridade(grau: pd.Series) -> pd.Series:
     return grau.map(MAPA_ESCOLARIDADE).fillna("nao_informado")
 
 
-def _raw_grau_instrucao(grau: pd.Series) -> pd.Series:
-    """Código CRU de grau de instrução (1..11; -1=ignorado) como string, SEM agrupar.
-    pd.to_numeric remove zero-padding eventual ('07'->'7'); preserva só o RAW."""
-    s = pd.to_numeric(grau, errors="coerce").astype("Int64").astype("string")
-    return s.fillna("nao_informado").astype(object)   # dtype object (igual às demais categóricas)
+def _raw_int(s: pd.Series, missing: int = -1) -> pd.Series:
+    """Código numérico CRU como int64; faltante/não-numérico -> sentinela
+    (-1 = 'ignorado' na RAIS). Converte zero-padding ('07'->7) automaticamente."""
+    return pd.to_numeric(s, errors="coerce").fillna(missing).astype("int64")
 
 
 def clean_rais(df_raw: pd.DataFrame) -> pd.DataFrame:
@@ -375,7 +375,7 @@ def clean_rais(df_raw: pd.DataFrame) -> pd.DataFrame:
         "cnae": df["cnae"].astype(str).str.strip().str.zfill(7),
         "uf": df["uf"].astype(str).str.upper().str.strip(),
         "idade": pd.to_numeric(df["idade"], errors="coerce"),
-        "escolaridade": _raw_grau_instrucao(df["grau_instrucao"]),   # código CRU, sem agrupar
+        "escolaridade": _raw_int(df["grau_instrucao"]),   # código CRU, sem agrupar
         "tamanho_estab": pd.to_numeric(df["tamanho_estab"], errors="coerce"),
         "tempo_vinculo_meses": pd.to_numeric(df["tempo_emprego_meses"], errors="coerce"),
         "vinculo_ativo": df["vinculo_ativo_3112"].astype(int),
@@ -407,7 +407,7 @@ def clean_caged(df_raw: pd.DataFrame) -> pd.DataFrame:
         "cnae": df["cnae"].astype(str).str.strip(),
         "uf": df["uf"].astype(str).str.upper().str.strip(),
         "idade": pd.to_numeric(df["idade"], errors="coerce"),
-        "escolaridade": _raw_grau_instrucao(df["grau_instrucao"]),   # código CRU, sem agrupar
+        "escolaridade": _raw_int(df["grau_instrucao"]),   # código CRU, sem agrupar
         "tamanho_estab": pd.to_numeric(df["tamanho_estab"], errors="coerce"),
         "tempo_vinculo_meses": np.nan,
         "saldo": df["saldomovimentacao"].astype(int),
