@@ -30,6 +30,7 @@ STAT = pd.read_csv("outputs/tables/sobrevivencia_weibull_estatisticas_mono_mob_2
 PRAZO = pd.read_csv("outputs/tables/consignado_prazo_max_2124.csv")
 COB = pd.read_csv("outputs/tables/consignado_cobertura_parcelas_2124.csv")
 TAXA = pd.read_csv("outputs/tables/consignado_taxa_breakeven_2124.csv")
+TAXA_NPV = pd.read_csv("outputs/tables/consignado_taxa_npv_2124.csv")
 
 AUC25 = ME.loc[2025, "AUC"]; KS25 = ME.loc[2025, "KS"]
 def pct(v, nd=1):
@@ -605,7 +606,7 @@ IDX["B3"] = len(pages) - 1
 
 # ======================= APÊNDICE C — POLÍTICA DE CONSIGNADO =======================
 divisor("Apêndice C — Política de prazos e taxas do consignado",
-        "Prazo máximo, cobertura de parcelas e taxa de juros mínima, por categoria", "C")
+        "Prazo máximo, cobertura de parcelas e taxas (piso de quebra-zero e pricing por NPV)", "C")
 
 def consignado_conceitos():
     fig = new_slide(); header(fig, "APLICAÇÃO · COMO LER AS TABELAS",
@@ -776,6 +777,82 @@ def consignado_taxas():
     footer(fig, "C4"); pages.append(fig)
 consignado_taxas()
 IDX["TAXTAB"] = len(pages) - 1
+
+def npv_conceitos():
+    fig = new_slide(); header(fig, "APLICAÇÃO · PRICING POR NPV",
+                              "Do piso de quebra-zero à taxa que dá retorno")
+    bullet(fig, 0.05, 0.78, [
+        (False, "Por que o piso não basta"),
+        (True, "O break-even ignora dois custos reais: o DINHEIRO TEM PREÇO (captação)"),
+        (None, "e um real amanhã vale menos que um real hoje (valor do tempo)."),
+        (False, "Valor Presente Líquido (NPV)"),
+        (True, "Traz cada parcela esperada para valor de hoje, descontando ao custo"),
+        (None, "de captação r_f:   NPV = −P + Σ A·S(m) / (1+r_f)^m."),
+        (True, "S(m) já embute o risco de desligamento; r_f cobra o funding."),
+        (False, "Taxa de pricing (com retorno-alvo)"),
+        (True, "Escolhe-se i tal que NPV = ROI·P (lucro a VP = ROI sobre o emprestado):"),
+        (None, "i / (1−(1+i)^−T) = (1+ROI) / D,   D = Σ S(m)/(1+r_f)^m."),
+        (True, "Break-even é o caso particular r_f = 0 e ROI = 0."),
+    ], fs=12.0, dy=0.0565)
+    # diagrama: taxa sobe do piso -> ROI 10% -> ROI 20% (ex.: cat 4 e cat 8, T=24)
+    import numpy as _np
+    ax = fig.add_axes([0.64, 0.155, 0.325, 0.545])
+    exs = [4, 8]; T = 24
+    def _bk(c): return float(TAXA.loc[TAXA.categoria == c, "m_T24"].iloc[0])
+    def _np10(c): return float(TAXA_NPV.loc[TAXA_NPV.categoria == c, "m10_T24"].iloc[0])
+    def _np20(c): return float(TAXA_NPV.loc[TAXA_NPV.categoria == c, "m20_T24"].iloc[0])
+    grupos = [("piso\n(break-even)", "#9aa7b8", [_bk(c) for c in exs]),
+              ("NPV · ROI 10%", "#3b7dba", [_np10(c) for c in exs]),
+              ("NPV · ROI 20%", NAVY, [_np20(c) for c in exs])]
+    x = _np.arange(len(exs)); w = 0.26
+    for j, (lab, col, vals) in enumerate(grupos):
+        ax.bar(x + (j - 1) * w, vals, width=w, color=col, label=lab, zorder=3, edgecolor="white", linewidth=0.8)
+        for xi, v in zip(x, vals):
+            ax.text(xi + (j - 1) * w, v + 0.06, f"{v:.1f}", ha="center", fontsize=7.6, color=INK)
+    ax.set_xticks(x); ax.set_xticklabels([f"cat {c}" for c in exs], fontsize=9)
+    ax.set_ylabel("taxa (% ao mês)", fontsize=9)
+    ax.set_title("Mesma categoria, T=24: o pricing\nsobe com funding + ROI", fontsize=9.6, weight="bold", color=INK, pad=6)
+    ax.legend(fontsize=7.4, loc="upper left", frameon=False, ncol=1)
+    ax.grid(axis="y", alpha=.25, zorder=0); ax.tick_params(labelsize=8, length=0)
+    for sp in ("top", "right", "left"): ax.spines[sp].set_visible(False)
+    ax.spines["bottom"].set_color("#c8d0db")
+    fig.text(0.05, 0.055, "Premissas ilustrativas: custo de captação 1,2%/mês; ROI = lucro a valor presente "
+             "como % do principal. Some ainda custo operacional e perdas residuais.", fontsize=9.5, color=GREY)
+    footer(fig, "C5"); pages.append(fig)
+npv_conceitos()
+
+def consignado_taxas_npv():
+    fig = new_slide(); header(fig, "APLICAÇÃO · PRICING POR NPV",
+                              "Taxa de pricing por categoria e prazo (NPV, funding 1,2%/mês)")
+    ax = fig.add_axes([0.05, 0.10, 0.66, 0.70]); ax.axis("off")
+    TS = [6, 12, 18, 24, 36, 48, 60]
+    cell = [[int(r.categoria)] + [f"{r[f'm10_T{t}']:.2f}" for t in TS] for _, r in TAXA_NPV.iterrows()]
+    col = ["cat"] + [f"T={t}" for t in TS]
+    tbl = ax.table(cellText=cell, colLabels=col, loc="center", cellLoc="center")
+    tbl.auto_set_font_size(False); tbl.set_fontsize(9.6); tbl.scale(1, 1.55)
+    for j in range(len(col)):
+        c = tbl[0, j]; c.set_facecolor(NAVY); c.set_text_props(color="white", weight="bold")
+    for i in range(1, len(cell) + 1):
+        tbl[i, 0].set_facecolor(gcolor(cell[i-1][0])); tbl[i, 0].set_text_props(color="white", weight="bold")
+        if i % 2 == 0:
+            for j in range(1, len(col)): tbl[i, j].set_facecolor("#f4f7fb")
+    fig.text(0.05, 0.84, "Taxa de PRICING (NPV) — ROI 10% · % ao mês", fontsize=12, weight="bold", color=INK)
+    ax2 = fig.add_axes([0.74, 0.12, 0.22, 0.66]); ax2.axis("off"); ax2.set_xlim(0, 1); ax2.set_ylim(0, 1)
+    ax2.add_patch(FancyBboxPatch((0, 0), 1, 1, boxstyle="round,pad=0.02", facecolor=LIGHT, linewidth=0))
+    ax2.text(0.5, 0.93, "Premissas", ha="center", fontsize=11.5, weight="bold", color=NAVY)
+    info = [("Captação", "1,2%/mês"), ("ROI-alvo", "10% (mostrado)"),
+            ("Alt. ROI", "20% (no HTML)"), ("Recuperação", "0% pós-deslig.")]
+    for k, (a, b) in enumerate(info):
+        y = 0.78 - k * 0.135
+        ax2.text(0.07, y, a, fontsize=10.5, color=INK, va="center", weight="bold")
+        ax2.text(0.93, y, b, fontsize=10, color=BLUE, va="center", ha="right")
+    fig.text(0.74, 0.10, "No HTML: botões alternam ROI\n(10%/20%) e mês/ano.", fontsize=9, color=GREY)
+    fig.text(0.05, 0.045, "Pricing-alvo: i tal que NPV = ROI·P (lucro a valor presente). Inclui funding e valor "
+             "do tempo; some custo operacional e perdas residuais. Categorias altas exigem prazos curtos.",
+             fontsize=9.5, color=GREY)
+    footer(fig, "C6"); pages.append(fig)
+consignado_taxas_npv()
+IDX["TAXNPV"] = len(pages) - 1
 
 # ======================= SÍNTESE (último slide) =======================
 fecho()

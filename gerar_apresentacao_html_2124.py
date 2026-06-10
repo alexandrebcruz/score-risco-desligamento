@@ -262,6 +262,41 @@ def taxa_table_slide():
             'Taxa praticada = este piso + custo de captação + custo operacional + margem.</div>'
             '</div></div>')
 
+# ---------- taxa por NPV (pricing): 4 variantes (ROI 10/20 × mês/ano) ----------
+TAXA_NPV = pd.read_csv("outputs/tables/consignado_taxa_npv_2124.csv").set_index("categoria")
+def _npv_tbl(roi, modo):    # roi: "10"/"20" ; modo: "m"/"a"
+    h = "<tr><th>cat</th>" + "".join(f"<th>T={t}</th>" for t in _TS_TX) + "</tr>"
+    vmax = TAXA_NPV[f"m{roi}_T6"].max()
+    body = ""
+    for k in TAXA_NPV.index:
+        k = int(k); cells = ""
+        for t in _TS_TX:
+            v = float(TAXA_NPV.loc[k, f"{modo}{roi}_T{t}"])
+            frac = 1 - min(1.0, (float(TAXA_NPV.loc[k, f"m{roi}_T{t}"]) / vmax) ** 0.5)
+            dec = 2 if modo == "m" else 1
+            cells += '<td style="background:%s">%s%%</td>' % (_heat(frac), f"{v:.{dec}f}".replace(".", ","))
+        body += "<tr>" + _catcell(k) + cells + "</tr>"
+    return '<table class="aptbl"><thead>%s</thead><tbody>%s</tbody></table>' % (h, body)
+NPV_TBL = {(roi, modo): _npv_tbl(roi, modo) for roi in ("10", "20") for modo in ("m", "a")}
+
+def npv_table_slide():
+    variantes = "".join(
+        '<div id="npv-%s%s"%s>%s</div>' % (roi, modo, ("" if (roi, modo) == ("10", "m") else ' style="display:none"'),
+                                           NPV_TBL[(roi, modo)])
+        for roi in ("10", "20") for modo in ("m", "a"))
+    return ('<div class="slide cust"><div class="hb"><span class="kick">REFERÊNCIA · PRICING POR NPV</span>'
+            '<span class="ttl">Taxa de pricing por categoria e prazo (NPV · funding 1,2%/mês)</span></div>'
+            '<div class="taxwrap">'
+            '<div class="taxhead"><div class="apt-h" id="npv-h">Taxa de pricing — ROI 10% · % ao mês</div>'
+            '<div style="display:flex;gap:.5em">'
+            '<button class="taxbtn" id="npv-roi" onclick="toggleNpvRoi()">Ver ROI 20% →</button>'
+            '<button class="taxbtn" id="npv-per" onclick="toggleNpvPer()">Ver % ao ano →</button></div></div>'
+            + variantes +
+            '<div class="apt-note">Pricing-alvo: i tal que NPV = ROI·P (lucro a valor presente). '
+            'Premissas: custo de captação 1,2%/mês; zero recuperação após o desligamento; '
+            'falta somar custo operacional e perdas residuais.</div>'
+            '</div></div>')
+
 def consig_tables_slide():
     return ('<div class="slide cust"><div class="hb"><span class="kick">REFERÊNCIA PARA A POLÍTICA DE CONCESSÃO</span>'
             '<span class="ttl">Prazo máximo e cobertura de parcelas por categoria (14 faixas, ref. 2021–2024)</span></div>'
@@ -288,6 +323,8 @@ for i in range(NP):
         slides.append(consig_tables_slide())
     elif i == IDX["TAXTAB"]:
         slides.append(taxa_table_slide())
+    elif i == IDX["TAXNPV"]:
+        slides.append(npv_table_slide())
     elif i == TABCAT:
         # slide 8 estático + botão que abre o modal do histórico de taxa de desligamento
         svg = inline_svg(f"{DUMP}/slide_{i:02d}.svg", f"s{i:02d}_")
@@ -638,6 +675,19 @@ function toggleTaxa(){
   document.getElementById('tax-h').textContent='Taxa mínima para recuperar o principal — '+(_taxAnual?'% ao ano':'% ao mês');
   document.getElementById('tax-btn').textContent=_taxAnual?'← Ver % ao mês':'Ver % ao ano →';
 }
+
+/* ---------- tabela NPV: dois toggles (ROI 10/20 e mês/ano) ---------- */
+let _npvRoi='10', _npvPer='m';
+function _npvRender(){
+  for(const r of ['10','20']) for(const p of ['m','a']){
+    const el=document.getElementById('npv-'+r+p); if(el) el.style.display=(r===_npvRoi&&p===_npvPer)?'':'none';
+  }
+  document.getElementById('npv-h').textContent='Taxa de pricing — ROI '+_npvRoi+'% · '+(_npvPer==='a'?'% ao ano':'% ao mês');
+  document.getElementById('npv-roi').textContent=_npvRoi==='10'?'Ver ROI 20% →':'← Ver ROI 10%';
+  document.getElementById('npv-per').textContent=_npvPer==='a'?'← Ver % ao mês':'Ver % ao ano →';
+}
+function toggleNpvRoi(){ _npvRoi=_npvRoi==='10'?'20':'10'; _npvRender(); }
+function toggleNpvPer(){ _npvPer=_npvPer==='m'?'a':'m'; _npvRender(); }
 </script>
 </body></html>"""
 
