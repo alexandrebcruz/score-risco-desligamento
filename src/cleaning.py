@@ -314,6 +314,7 @@ def clean_rais_real(df_bruto: pd.DataFrame, regiao: str | None = None) -> pd.Dat
     _ref = np.where(_ativo.values == 0, _msdes.values, 12)                              # mês da medição
     _entry = np.where((_msadm.values >= 1) & (_msadm.values <= 12), _msadm.values, 0)   # entrada na janela
     _tempo_inicio = (_tempo - (_ref - _entry)).clip(lower=0)
+    _observ = np.clip(_ref - _entry, 1, None)          # meses de exposição observados no ano (>=1)
     # ID posicional ÚNICO: ano_regiao_nº-da-linha-no-arquivo (0-based, ordem do RAW).
     _row = (df["__row"].astype("int64") if "__row" in df.columns
             else pd.Series(range(len(df)), index=df.index)).astype(str)
@@ -342,7 +343,10 @@ def clean_rais_real(df_bruto: pd.DataFrame, regiao: str | None = None) -> pd.Dat
         "simples": _raw_int(df["simples"]),                       # int64 (0/1; -1=ausente)
         "faixa_horas": _raw_int(df["faixa_horas"]),               # int64
         "causa_afastamento": df["causa_afastamento"].astype(str).str.strip(),
-        "qtd_dias_afastamento": pd.to_numeric(df["qtd_dias_afastamento"], errors="coerce").fillna(0),
+        # NORMALIZADO por exposição (dias de afastamento POR MÊS observado) p/ remover o
+        # vazamento de truncamento: desligado-cedo acumularia menos dias só por ter menos
+        # meses. Mantém o nome da coluna; a semântica passa a ser "dias/mês".
+        "qtd_dias_afastamento": pd.to_numeric(df["qtd_dias_afastamento"], errors="coerce").fillna(0) / _observ,
         # --- desfecho / alvo (no FINAL; NUNCA usar como feature) ---
         # 0 = vínculo admitido em ano anterior (vigente no início do ano); 1-12 = mês de admissão no ano
         "mes_admissao": _msadm,
