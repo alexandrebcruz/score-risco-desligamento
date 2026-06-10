@@ -22,14 +22,16 @@ PARTS = "outputs/predicoes_2023"
 OUT = "outputs/predicoes_2023_ensemble_base.parquet"
 os.makedirs(PARTS, exist_ok=True)
 
-EXTRA_CAT = ["tipo_vinculo", "faixa_remuneracao", "natureza_juridica", "natureza_setor",
-             "intermitente", "simples", "faixa_horas", "causa_afastamento"]
+EXTRA_CAT = ["tipo_vinculo", "natureza_juridica", "natureza_setor",
+             "intermitente", "simples", "causa_afastamento"]
+# Ordinais (a ORDEM do código tem significado) -> NUMÉRICAS; 99=ignorado -> -1.
+ORD = ["escolaridade", "tamanho_estab", "faixa_remuneracao", "faixa_horas"]
 CAT = (["cbo", "cbo4", "cbo2", "cbo1", "cnae", "cnae5", "cnae3", "cnae2",
-        "uf", "escolaridade", "tamanho_estab"] + EXTRA_CAT)
-NUM = ["idade", "tempo_vinculo_meses", "qtd_dias_afastamento"]
+        "uf"] + EXTRA_CAT)
+NUM = ["idade", "tempo_vinculo_meses", "qtd_dias_afastamento"] + ORD
 FEATURES = CAT + NUM
-RAW = (["cbo", "cnae", "uf", "escolaridade", "tamanho_estab",
-        "idade", "tempo_vinculo_meses", "qtd_dias_afastamento", "motivo_unificado"] + EXTRA_CAT)
+RAW = (["cbo", "cnae", "uf",
+        "idade", "tempo_vinculo_meses", "qtd_dias_afastamento", "motivo_unificado"] + ORD + EXTRA_CAT)
 TARGET = "involuntario_sjc"
 
 t0 = time.time()
@@ -45,6 +47,8 @@ def prep(d):
     d["cnae5"], d["cnae3"], d["cnae2"] = cnae.str[:5], cnae.str[:3], cnae.str[:2]
     for c in CAT: d[c] = d[c].astype(str)
     for c in NUM: d[c] = pd.to_numeric(d[c], errors="coerce").fillna(-1).astype("float32")
+    for c in ("faixa_remuneracao", "faixa_horas"):
+        d.loc[d[c] == 99, c] = -1                    # 99 = ignorado -> sentinela
     return d
 
 log("carregando modelos A e B ...")

@@ -18,13 +18,16 @@ DATA = "/workspace/data/rais"
 OUT = "/workspace/artifacts"
 os.makedirs(OUT, exist_ok=True)
 
-EXTRA_CAT = ["tipo_vinculo", "faixa_remuneracao", "natureza_juridica", "natureza_setor",
-             "intermitente", "simples", "faixa_horas", "causa_afastamento"]
-RAW = (["cbo", "cnae", "uf", "escolaridade", "tamanho_estab",
-        "idade", "tempo_vinculo_meses", "qtd_dias_afastamento", "motivo_unificado"] + EXTRA_CAT)
+EXTRA_CAT = ["tipo_vinculo", "natureza_juridica", "natureza_setor",
+             "intermitente", "simples", "causa_afastamento"]
+# Ordinais (a ORDEM do código tem significado: escolaridade 1..11, tamanho 1..10,
+# faixas 0..11/1..6) -> tratadas como NUMÉRICAS; 99/{ñ class}/ausente -> -1.
+ORD = ["escolaridade", "tamanho_estab", "faixa_remuneracao", "faixa_horas"]
+RAW = (["cbo", "cnae", "uf",
+        "idade", "tempo_vinculo_meses", "qtd_dias_afastamento", "motivo_unificado"] + ORD + EXTRA_CAT)
 CAT = (["cbo", "cbo4", "cbo2", "cbo1", "cnae", "cnae5", "cnae3", "cnae2",
-        "uf", "escolaridade", "tamanho_estab"] + EXTRA_CAT)
-NUM = ["idade", "tempo_vinculo_meses", "qtd_dias_afastamento"]
+        "uf"] + EXTRA_CAT)
+NUM = ["idade", "tempo_vinculo_meses", "qtd_dias_afastamento"] + ORD
 FEATURES = CAT + NUM
 TARGET_MOTIVO = "involuntario_sjc"
 HOLDOUT_ANO = 2023
@@ -56,6 +59,8 @@ def load(anos):
                 d[c] = d[c].astype(str).astype("category")
             for c in NUM:
                 d[c] = pd.to_numeric(d[c], errors="coerce").fillna(-1).astype("float32")
+            for c in ("faixa_remuneracao", "faixa_horas"):
+                d.loc[d[c] == 99, c] = -1            # 99 = ignorado -> sentinela
             parts.append(d[FEATURES + ["y"]])
             log(f"  lido ano={a}/{os.path.basename(f)} ({len(d):,})")
     out = pd.concat(parts, ignore_index=True); del parts; gc.collect()

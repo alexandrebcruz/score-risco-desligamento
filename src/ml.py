@@ -20,11 +20,13 @@ from .config import load_config
 from . import binning, cells, rates
 
 # novas features (existem em todos os anos 2020-2023)
-EXTRA_CAT = ["tipo_vinculo", "faixa_remuneracao", "natureza_juridica", "natureza_setor",
-             "intermitente", "simples", "faixa_horas", "causa_afastamento"]
+EXTRA_CAT = ["tipo_vinculo", "natureza_juridica", "natureza_setor",
+             "intermitente", "simples", "causa_afastamento"]
+# Ordinais (a ORDEM do código tem significado) -> NUMÉRICAS; 99=ignorado -> -1.
+ORD = ["escolaridade", "tamanho_estab", "faixa_remuneracao", "faixa_horas"]
 # Colunas lidas direto dos microdados (interim)
-COLS_RAW = (["cbo", "cnae", "uf", "escolaridade", "tamanho_estab",
-             "idade", "tempo_vinculo_meses", "qtd_dias_afastamento"] + EXTRA_CAT)
+COLS_RAW = (["cbo", "cnae", "uf",
+             "idade", "tempo_vinculo_meses", "qtd_dias_afastamento"] + ORD + EXTRA_CAT)
 
 # Prefixos hierárquicos derivados (agregadores naturais dos códigos):
 #  CBO 2002 (6 díg): 1=grande grupo, 2=subgrupo principal, 4=família.
@@ -34,8 +36,8 @@ CNAE_NIVEIS = {"cnae2": 2, "cnae3": 3, "cnae5": 5}
 
 # Features do modelo: código completo + prefixos agregadores + demais categóricas.
 FEATURES_CAT = (["cbo", "cbo4", "cbo2", "cbo1", "cnae", "cnae5", "cnae3", "cnae2"]
-                + ["uf", "escolaridade", "tamanho_estab"] + EXTRA_CAT)
-FEATURES_NUM = ["idade", "tempo_vinculo_meses", "qtd_dias_afastamento"]
+                + ["uf"] + EXTRA_CAT)
+FEATURES_NUM = ["idade", "tempo_vinculo_meses", "qtd_dias_afastamento"] + ORD
 FEATURES = FEATURES_CAT + FEATURES_NUM
 
 
@@ -85,6 +87,8 @@ def prepare_xy(df: pd.DataFrame):
         X[c] = X[c].astype(str).fillna("NA")
     for c in FEATURES_NUM:
         X[c] = pd.to_numeric(X[c], errors="coerce").fillna(-1.0)
+    for c in ("faixa_remuneracao", "faixa_horas"):
+        X.loc[X[c] == 99, c] = -1.0              # 99 = ignorado -> sentinela
     y = df["y"].astype(int).values
     return X, y
 

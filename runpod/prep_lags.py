@@ -17,13 +17,16 @@ OUT = "/workspace/data/rais_lags"
 LAG_DIR = "/workspace/lags"
 ANOS = [2019, 2020, 2021, 2022, 2023]
 
-EXTRA_CAT = ["tipo_vinculo", "faixa_remuneracao", "natureza_juridica", "natureza_setor",
-             "intermitente", "simples", "faixa_horas", "causa_afastamento"]
+EXTRA_CAT = ["tipo_vinculo", "natureza_juridica", "natureza_setor",
+             "intermitente", "simples", "causa_afastamento"]
+# Ordinais (a ORDEM do código tem significado) -> NUMÉRICAS; 99=ignorado -> -1.
+# (Seguem em LAG_FEATURES como chave de join por VALOR — convertidas após o join.)
+ORD = ["escolaridade", "tamanho_estab", "faixa_remuneracao", "faixa_horas"]
 BASE_CAT = ["cbo", "cbo4", "cbo2", "cbo1", "cnae", "cnae5", "cnae3", "cnae2",
-            "uf", "escolaridade", "tamanho_estab"]
+            "uf"]
 CAT = BASE_CAT + EXTRA_CAT
-RAW = (["cbo", "cnae", "uf", "escolaridade", "tamanho_estab",
-        "idade", "tempo_vinculo_meses", "qtd_dias_afastamento", "motivo_unificado"] + EXTRA_CAT)
+RAW = (["cbo", "cnae", "uf",
+        "idade", "tempo_vinculo_meses", "qtd_dias_afastamento", "motivo_unificado"] + ORD + EXTRA_CAT)
 BASE_NUM = ["idade", "tempo_vinculo_meses", "qtd_dias_afastamento"]
 LAG_FEATURES = ["cbo", "cbo4", "cbo2", "cbo1", "cnae", "cnae5", "cnae3", "cnae2",
                 "uf", "escolaridade", "tamanho_estab", "tipo_vinculo", "faixa_remuneracao",
@@ -31,7 +34,7 @@ LAG_FEATURES = ["cbo", "cbo4", "cbo2", "cbo1", "cnae", "cnae5", "cnae3", "cnae2"
                 "faixa_horas", "causa_afastamento"]
 LAGS = (1, 2, 3)
 LAG_COLS = [f"{f}_{k}_lag{L}" for f in LAG_FEATURES for L in LAGS for k in ("n", "k")]
-FEATURES = CAT + BASE_NUM + LAG_COLS
+FEATURES = CAT + ORD + BASE_NUM + LAG_COLS
 TARGET_MOTIVO = "involuntario_sjc"
 
 t0 = time.time()
@@ -55,6 +58,8 @@ def enrich(d, ano):
     d["y"] = (d["motivo_unificado"] == TARGET_MOTIVO).astype("int8")
     for c in CAT:
         d[c] = d[c].astype(str)
+    for c in ORD:
+        d[c] = d[c].astype(str)        # str p/ o JOIN de lag por valor (volta a num após)
     for c in BASE_NUM:
         d[c] = pd.to_numeric(d[c], errors="coerce").fillna(-1).astype("float32")
     for f in LAG_FEATURES:
@@ -65,6 +70,11 @@ def enrich(d, ano):
             sub = sub.rename(columns={"valor": f, "n": f"{f}_n_lag{L}", "k_sjc": f"{f}_k_lag{L}"})
             d = d.merge(sub, on=f, how="left")
     for c in LAG_COLS:
+        d[c] = d[c].astype("float32")
+    # ordinais de volta a numéricas (99 = ignorado -> -1)
+    for c in ORD:
+        d[c] = pd.to_numeric(d[c], errors="coerce").fillna(-1)
+        d.loc[d[c] == 99, c] = -1
         d[c] = d[c].astype("float32")
     for c in CAT:
         d[c] = d[c].astype("category")
