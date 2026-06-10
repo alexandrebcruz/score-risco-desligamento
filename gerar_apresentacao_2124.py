@@ -771,9 +771,9 @@ def consignado_taxas():
         ax2.text(0.18, y + 0.03, f"cat {c}", fontsize=10.5, color=INK, va="center", weight="bold")
         ax2.text(0.97, y + 0.03, txt, fontsize=10.5, color=BLUE, va="center", ha="right", weight="bold")
     fig.text(0.74, 0.075, "No HTML: botão alterna\nentre % ao mês e % ao ano.", fontsize=9, color=GREY)
-    fig.text(0.05, 0.045, "Piso de quebra-zero (recebimento nominal ≥ principal). Taxa praticada = piso + "
-             "funding + custo operacional + margem. Categorias altas só fecham em prazos curtos.",
-             fontsize=9.5, color=GREY)
+    fig.text(0.05, 0.045, "Premissa: ZERO recuperação do saldo após o desligamento (conservador). Piso de "
+             "quebra-zero; taxa praticada = piso + funding + custo operacional + margem.",
+             fontsize=9.3, color=GREY)
     footer(fig, "C4"); pages.append(fig)
 consignado_taxas()
 IDX["TAXTAB"] = len(pages) - 1
@@ -816,8 +816,9 @@ def npv_conceitos():
     ax.grid(axis="y", alpha=.25, zorder=0); ax.tick_params(labelsize=8, length=0)
     for sp in ("top", "right", "left"): ax.spines[sp].set_visible(False)
     ax.spines["bottom"].set_color("#c8d0db")
-    fig.text(0.05, 0.055, "Premissas ilustrativas: custo de captação 1,2%/mês; ROI = lucro a valor presente "
-             "como % do principal. Some ainda custo operacional e perdas residuais.", fontsize=9.5, color=GREY)
+    fig.text(0.05, 0.055, "Premissas ilustrativas: captação 1,2%/mês; ROI = lucro a valor presente (% do "
+             "principal); ZERO recuperação após o desligamento; falta somar custo operacional.",
+             fontsize=9.3, color=GREY)
     footer(fig, "C5"); pages.append(fig)
 npv_conceitos()
 
