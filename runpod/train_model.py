@@ -18,7 +18,7 @@ OUT = "/workspace/artifacts"
 os.makedirs(OUT, exist_ok=True)
 
 EXTRA_CAT = ["tipo_vinculo", "natureza_juridica", "natureza_setor",
-             "intermitente", "simples", "causa_afastamento"]
+             "intermitente", "simples"]
 # Ordinais (a ORDEM do código tem significado: escolaridade 1..11, tamanho 1..10,
 # faixas 0..11/1..6) -> tratadas como NUMÉRICAS; 99/{ñ class}/ausente -> -1.
 ORD = ["escolaridade", "tamanho_estab", "faixa_remuneracao", "faixa_horas"]

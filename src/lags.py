@@ -26,12 +26,12 @@ LAG_FEATURES = [
     "cbo", "cbo4", "cbo2", "cbo1", "cnae", "cnae5", "cnae3", "cnae2",
     "uf", "escolaridade", "tamanho_estab", "tipo_vinculo", "faixa_remuneracao",
     "natureza_juridica", "natureza_setor", "intermitente", "simples",
-    "faixa_horas", "causa_afastamento",
+    "faixa_horas",
 ]
 # Colunas lidas do interim (cbo4/cbo2/... são derivadas; natureza_setor já existe).
 _BASE_COLS = ["cbo", "cnae", "uf", "escolaridade", "tamanho_estab", "tipo_vinculo",
               "faixa_remuneracao", "natureza_juridica", "natureza_setor",
-              "intermitente", "simples", "faixa_horas", "causa_afastamento",
+              "intermitente", "simples", "faixa_horas",
               "motivo_unificado"]
 LAGS = (1, 2, 3)
 

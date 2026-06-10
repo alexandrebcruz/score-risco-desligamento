@@ -17,7 +17,7 @@ OUT = "/workspace/artifacts_lags"
 os.makedirs(OUT, exist_ok=True)
 
 EXTRA_CAT = ["tipo_vinculo", "natureza_juridica", "natureza_setor",
-             "intermitente", "simples", "causa_afastamento"]
+             "intermitente", "simples"]
 # Ordinais (a ORDEM do código tem significado) -> NUMÉRICAS; 99=ignorado -> -1.
 # (Seguem em LAG_FEATURES como chave de join por VALOR — convertidas após o join.)
 ORD = ["escolaridade", "tamanho_estab", "faixa_remuneracao", "faixa_horas"]
@@ -28,7 +28,7 @@ BASE_NUM = ["idade", "tempo_vinculo_meses", "qtd_dias_afastamento"]
 LAG_FEATURES = ["cbo", "cbo4", "cbo2", "cbo1", "cnae", "cnae5", "cnae3", "cnae2",
                 "uf", "escolaridade", "tamanho_estab", "tipo_vinculo", "faixa_remuneracao",
                 "natureza_juridica", "natureza_setor", "intermitente", "simples",
-                "faixa_horas", "causa_afastamento"]
+                "faixa_horas"]
 LAGS = (1, 2, 3)
 LAG_COLS = [f"{f}_{k}_lag{L}" for f in LAG_FEATURES for L in LAGS for k in ("n", "k")]
 NUM = BASE_NUM + ORD + LAG_COLS

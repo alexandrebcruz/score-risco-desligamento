@@ -21,7 +21,7 @@ from . import binning, cells, rates
 
 # novas features (existem em todos os anos 2020-2023)
 EXTRA_CAT = ["tipo_vinculo", "natureza_juridica", "natureza_setor",
-             "intermitente", "simples", "causa_afastamento"]
+             "intermitente", "simples"]
 # Ordinais (a ORDEM do código tem significado) -> NUMÉRICAS; 99=ignorado -> -1.
 ORD = ["escolaridade", "tamanho_estab", "faixa_remuneracao", "faixa_horas"]
 # Colunas lidas direto dos microdados (interim)

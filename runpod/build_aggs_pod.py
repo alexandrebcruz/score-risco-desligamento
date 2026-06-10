@@ -32,10 +32,10 @@ NWORKERS = int(os.environ.get("NWORKERS", "24"))
 LAG_FEATURES = ["cbo", "cbo4", "cbo2", "cbo1", "cnae", "cnae5", "cnae3", "cnae2",
                 "uf", "escolaridade", "tamanho_estab", "tipo_vinculo", "faixa_remuneracao",
                 "natureza_juridica", "natureza_setor", "intermitente", "simples",
-                "faixa_horas", "causa_afastamento"]
+                "faixa_horas"]
 BASE_COLS = ["cbo", "cnae", "uf", "escolaridade", "tamanho_estab", "tipo_vinculo",
              "faixa_remuneracao", "natureza_juridica", "natureza_setor",
-             "intermitente", "simples", "faixa_horas", "causa_afastamento",
+             "intermitente", "simples", "faixa_horas",
              "motivo_unificado"]
 # NOTA: remap 999->99, strip de zeros e zfill NÃO são mais feitos aqui — o interim
 # novo (src/cleaning.clean_rais_real) já entrega tudo harmonizado (faixas/escolaridade
