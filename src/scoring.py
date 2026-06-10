@@ -132,7 +132,7 @@ def score_lote(df: pd.DataFrame, motivos: list[str] | None = None,
         res = scorer.score_pessoa(
             cbo=row["cbo"], cnae=row["cnae"], uf=row["uf"], idade=row["idade"],
             escolaridade=row["escolaridade"],
-            tempo_vinculo_meses=row["tempo_vinculo_meses_inicio"],
+            tempo_vinculo_meses=row["tempo_vinculo_meses"],
             tamanho_empresa=row["tamanho_empresa"],
             motivos=motivos, horizontes=horizontes)
         rec = {}

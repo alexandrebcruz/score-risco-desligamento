@@ -29,8 +29,8 @@ BASE_CAT = ["cbo", "cbo4", "cbo2", "cbo1", "cnae", "cnae5", "cnae3", "cnae2",
             "uf", "escolaridade", "tamanho_estab"]
 CAT = BASE_CAT + EXTRA_CAT
 RAW = (["cbo", "cnae", "uf", "escolaridade", "tamanho_estab",
-        "idade", "tempo_vinculo_meses_inicio", "qtd_dias_afastamento", "motivo_unificado"] + EXTRA_CAT)
-BASE_NUM = ["idade", "tempo_vinculo_meses_inicio", "qtd_dias_afastamento"]
+        "idade", "tempo_vinculo_meses", "qtd_dias_afastamento", "motivo_unificado"] + EXTRA_CAT)
+BASE_NUM = ["idade", "tempo_vinculo_meses", "qtd_dias_afastamento"]
 LAG_FEATURES = ["cbo", "cbo4", "cbo2", "cbo1", "cnae", "cnae5", "cnae3", "cnae2",
                 "uf", "escolaridade", "tamanho_estab", "tipo_vinculo", "faixa_remuneracao",
                 "natureza_juridica", "natureza_setor", "intermitente", "simples",

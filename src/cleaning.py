@@ -1,7 +1,7 @@
 """Limpeza, padronização e harmonização RAIS x CAGED para um schema comum.
 
 Schema canônico de saída (uma linha por vínculo/movimentação):
-    ... features ..., tempo_vinculo_meses_inicio, ...,
+    ... features ..., tempo_vinculo_meses, ...,
     (DESFECHO, no final, nunca-feature) vinculo_ativo, mes_deslig, motivo_unificado
 
 `motivo_unificado` ∈ MOTIVOS (config) ou "ativo" quando não houve desligamento
@@ -329,7 +329,7 @@ def clean_rais_real(df_bruto: pd.DataFrame, regiao: str | None = None) -> pd.Dat
         "idade": pd.to_numeric(df["idade"], errors="coerce"),
         "escolaridade": _raw_int(df["grau_instrucao"]),           # int64: código CRU 1..11 (-1=ign.)
         "tamanho_estab": pd.to_numeric(df["tamanho_estab"], errors="coerce"),
-        "tempo_vinculo_meses_inicio": _tempo_inicio,              # antiguidade no início (leak-free)
+        "tempo_vinculo_meses": _tempo_inicio,              # antiguidade no início (leak-free)
         # --- enriquecimento (features) ---
         "tipo_vinculo": df["tipo_vinculo"].astype(str).str.strip(),
         "categoria_trab": df["categoria_trab"].astype(str).str.strip(),
@@ -390,7 +390,7 @@ def clean_rais(df_raw: pd.DataFrame) -> pd.DataFrame:
         "idade": pd.to_numeric(df["idade"], errors="coerce"),
         "escolaridade": _raw_int(df["grau_instrucao"]),   # código CRU, sem agrupar
         "tamanho_estab": pd.to_numeric(df["tamanho_estab"], errors="coerce"),
-        "tempo_vinculo_meses_inicio": _tempo_inicio,
+        "tempo_vinculo_meses": _tempo_inicio,
         # --- desfecho / alvo (NUNCA usar como feature) ---
         "vinculo_ativo": _ativo,
         "mes_deslig": _msdes,
@@ -406,7 +406,7 @@ def clean_caged(df_raw: pd.DataFrame) -> pd.DataFrame:
 
     No CAGED cada linha é uma movimentação; aqui mantemos apenas a informação
     necessária para fluxos: admissões (saldo +1) e desligamentos (saldo -1).
-    `tempo_vinculo_meses_inicio` não vem no CAGED de forma direta -> NaN (tratado no
+    `tempo_vinculo_meses` não vem no CAGED de forma direta -> NaN (tratado no
     cálculo de taxas, que para o componente recente agrega sem essa dimensão).
     """
     df = df_raw.copy()
@@ -422,7 +422,7 @@ def clean_caged(df_raw: pd.DataFrame) -> pd.DataFrame:
         "idade": pd.to_numeric(df["idade"], errors="coerce"),
         "escolaridade": _raw_int(df["grau_instrucao"]),   # código CRU, sem agrupar
         "tamanho_estab": pd.to_numeric(df["tamanho_estab"], errors="coerce"),
-        "tempo_vinculo_meses_inicio": np.nan,
+        "tempo_vinculo_meses": np.nan,
         "saldo": df["saldomovimentacao"].astype(int),
         "motivo_unificado": np.where(
             desligamento, _map_motivo(df["motivo_desligamento"]), "admissao"),
