@@ -816,6 +816,14 @@ def npv_conceitos():
     ax.grid(axis="y", alpha=.25, zorder=0); ax.tick_params(labelsize=8, length=0)
     for sp in ("top", "right", "left"): ax.spines[sp].set_visible(False)
     ax.spines["bottom"].set_color("#c8d0db")
+    # callout: comportamento da taxa com o prazo por causa do ROI
+    axn = fig.add_axes([0.05, 0.085, 0.555, 0.125]); axn.axis("off"); axn.set_xlim(0, 1); axn.set_ylim(0, 1)
+    axn.add_patch(FancyBboxPatch((0, 0), 1, 1, boxstyle="round,pad=0.02", facecolor="#eaf1f9",
+                                 edgecolor="#9fc0e8", linewidth=1))
+    axn.text(0.04, 0.80, "▼  Efeito do ROI no prazo", fontsize=10.5, weight="bold", color=BLUE, va="center")
+    axn.text(0.04, 0.42, "No BAIXO risco a taxa CAI com o prazo: a margem-alvo se dilui\n"
+             "em mais meses de pagamento quase certo (no alto risco, some).",
+             fontsize=9.2, color=INK, va="center", linespacing=1.4)
     fig.text(0.05, 0.055, "Premissas ilustrativas: captação 1,2%/mês; ROI = lucro a valor presente (% do "
              "principal); ZERO recuperação após o desligamento; falta somar custo operacional.",
              fontsize=9.3, color=GREY)
@@ -844,10 +852,14 @@ def consignado_taxas_npv():
     info = [("Captação", "1,2%/mês"), ("ROI-alvo", "10% (mostrado)"),
             ("Alt. ROI", "20% (no HTML)"), ("Recuperação", "0% pós-deslig.")]
     for k, (a, b) in enumerate(info):
-        y = 0.78 - k * 0.135
+        y = 0.80 - k * 0.105
         ax2.text(0.07, y, a, fontsize=10.5, color=INK, va="center", weight="bold")
         ax2.text(0.93, y, b, fontsize=10, color=BLUE, va="center", ha="right")
-    fig.text(0.74, 0.10, "No HTML: botões alternam ROI\n(10%/20%) e mês/ano.", fontsize=9, color=GREY)
+    ax2.add_patch(Rectangle((0.06, 0.30), 0.88, 0.005, color="#cdd5df"))
+    ax2.text(0.5, 0.245, "▼ Efeito do ROI", ha="center", fontsize=10, weight="bold", color=BLUE)
+    ax2.text(0.5, 0.115, "no baixo risco a taxa CAI\ncom o prazo (margem diluída\nem mais meses quase certos)",
+             ha="center", fontsize=8.6, color=INK, va="center")
+    fig.text(0.74, 0.075, "No HTML: botões alternam ROI\n(10%/20%) e mês/ano.", fontsize=9, color=GREY)
     fig.text(0.05, 0.045, "Pricing-alvo: i tal que NPV = ROI·P (lucro a valor presente). Inclui funding e valor "
              "do tempo; some custo operacional e perdas residuais. Categorias altas exigem prazos curtos.",
              fontsize=9.5, color=GREY)

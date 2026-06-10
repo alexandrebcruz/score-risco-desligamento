@@ -292,9 +292,10 @@ def npv_table_slide():
             '<button class="taxbtn" id="npv-roi" onclick="toggleNpvRoi()">Ver ROI 20% →</button>'
             '<button class="taxbtn" id="npv-per" onclick="toggleNpvPer()">Ver % ao ano →</button></div></div>'
             + variantes +
-            '<div class="apt-note">Pricing-alvo: i tal que NPV = ROI·P (lucro a valor presente). '
-            'Premissas: custo de captação 1,2%/mês; zero recuperação após o desligamento; '
-            'falta somar custo operacional e perdas residuais.</div>'
+            '<div class="apt-note"><b>Por causa do ROI fixo, no baixo risco a taxa CAI com o prazo</b> '
+            '(a margem-alvo se dilui em mais meses de pagamento quase certo; no alto risco isso some). '
+            'Pricing-alvo: i tal que NPV = ROI·P (lucro a valor presente). Premissas: captação 1,2%/mês; '
+            'zero recuperação após o desligamento; falta somar custo operacional e perdas residuais.</div>'
             '</div></div>')
 
 def consig_tables_slide():
