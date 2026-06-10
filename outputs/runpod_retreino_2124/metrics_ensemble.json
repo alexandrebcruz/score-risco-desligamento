@@ -1,0 +1,56 @@
+{
+  "fit_A": [
+    2021,
+    2022
+  ],
+  "val_A": [
+    2023,
+    2024
+  ],
+  "fit_B": [
+    2023,
+    2024
+  ],
+  "val_B": [
+    2021,
+    2022
+  ],
+  "best_iter_A": 515,
+  "best_iter_B": 72,
+  "features": [
+    "cbo",
+    "cbo4",
+    "cbo2",
+    "cbo1",
+    "cnae",
+    "cnae5",
+    "cnae3",
+    "cnae2",
+    "uf",
+    "tipo_vinculo",
+    "natureza_juridica",
+    "natureza_setor",
+    "intermitente",
+    "simples",
+    "idade",
+    "tempo_vinculo_meses",
+    "qtd_dias_afastamento",
+    "escolaridade",
+    "tamanho_estab",
+    "faixa_remuneracao",
+    "faixa_horas"
+  ],
+  "anos_eval": [
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "segundos": 5420.9
+}
