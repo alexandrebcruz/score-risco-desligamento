@@ -198,12 +198,51 @@ ensemble()
 
 # ======================= 5. DESEMPENHO =======================
 def desempenho():
+    """Tudo desenhado NATIVAMENTE (vetorial — vira SVG puro no deck HTML):
+    AUC e KS em gráficos de LINHA separados (AUC y∈[0,5;1]; KS y∈[0;1]) + calibração."""
     fig = new_slide(); header(fig, "DESENVOLVIMENTO · RESULTADO", "Estável em 10 safras, calibrado no futuro")
-    ax1 = fig.add_axes([0.03, 0.10, 0.52, 0.72]); ax1.imshow(plt.imread("outputs/figures/metricas_ano_2124.png")); ax1.axis("off")
-    ax2 = fig.add_axes([0.57, 0.10, 0.40, 0.72]); ax2.imshow(plt.imread("outputs/figures/calibracao_ensemble_2124.png")); ax2.axis("off")
-    fig.text(0.03, 0.045, "AUC/KS por ano: anos fora do treino (OOS) mantêm o desempenho — incl. 2025, o futuro nunca visto.",
+    e = ME.reset_index().sort_values("ano")
+    anos = e["ano"].values
+    treino = e["papel"].ne("out_of_sample").values        # anos usados em fit/val (2021–24)
+
+    def linha_metrica(pos, valores, nome, cor, ylo, yhi, xlab=False):
+        ax = fig.add_axes(pos)
+        # faixa sombreada = anos do treino (fit/val); fora dela = out-of-sample
+        a0, a1 = anos[treino].min() - 0.5, anos[treino].max() + 0.5
+        ax.axvspan(a0, a1, color="#dce6f2", alpha=0.6, zorder=0)
+        ax.plot(anos, valores, color=cor, lw=2.4, marker="o", ms=5, zorder=3)
+        for xx, vv in zip(anos, valores):
+            ax.annotate(f"{vv:.3f}", (xx, vv), textcoords="offset points", xytext=(0, 7),
+                        ha="center", fontsize=7.6, color=INK)
+        ax.set_ylim(ylo, yhi); ax.set_xlim(anos.min() - 0.4, anos.max() + 0.4)
+        ax.set_xticks(anos); ax.tick_params(labelsize=8.5)
+        if not xlab: ax.set_xticklabels([])
+        _fmt = lambda v: f"{v:g}".replace(".", ",")
+        ax.set_title(f"{nome} por ano  (eixo y: {_fmt(ylo)}–{_fmt(yhi)})",
+                     fontsize=11.5, weight="bold", loc="left", color=INK)
+        ax.grid(axis="y", alpha=.3)
+        for s in ("top", "right"): ax.spines[s].set_visible(False)
+        ax.text(a0 + 0.1, ylo + (yhi - ylo) * 0.05, "treino/val (2021–24)", fontsize=7.5, color="#5b7da8")
+        return ax
+
+    linha_metrica([0.055, 0.50, 0.46, 0.295], e["AUC"].values, "AUC", BLUE, 0.5, 1.0)
+    linha_metrica([0.055, 0.125, 0.46, 0.295], e["KS"].values, "KS", "#e8742c", 0.0, 1.0, xlab=True)
+
+    # calibração 2025 desenhada nativa (decis previsto × observado)
+    cal = pd.read_csv(f"{ART}/calibracao_2025.csv")
+    axc = fig.add_axes([0.60, 0.125, 0.36, 0.645])
+    lim = max(cal.prevista.max(), cal.observada.max()) * 1.08
+    axc.plot([0, lim], [0, lim], ls="--", color="#999", lw=1.2, label="calibração perfeita")
+    axc.plot(cal.prevista, cal.observada, marker="o", ms=5, color=BLUE, lw=1.8, label="ensemble 21–24")
+    axc.set_xlabel("risco previsto (média do decil)", fontsize=9.5)
+    axc.set_ylabel("risco observado (freq. real)", fontsize=9.5)
+    axc.set_title("Calibração — out-of-time 2025", fontsize=11.5, weight="bold", loc="left", color=INK)
+    axc.tick_params(labelsize=8.5); axc.legend(fontsize=8.5, loc="upper left"); axc.grid(alpha=.3)
+    for s in ("top", "right"): axc.spines[s].set_visible(False)
+
+    fig.text(0.055, 0.052, "Fora da faixa sombreada = anos NUNCA vistos no treino — incl. 2025, o futuro puro.",
              fontsize=10, color=GREY)
-    fig.text(0.57, 0.045, "Calibração no 2025: risco previsto ≈ observado nos decis.", fontsize=10, color=GREY)
+    fig.text(0.60, 0.052, "Risco previsto ≈ observado em todos os decis de 2025.", fontsize=10, color=GREY)
     footer(fig, "5"); pages.append(fig)
 desempenho()
 
