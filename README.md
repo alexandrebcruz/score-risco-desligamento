@@ -13,12 +13,41 @@ O projeto tem **duas linhas que se complementam**:
 2. **Benchmark supervisionado (CatBoost)**: ensemble cross-temporal usado para medir o
    teto de performance e validar features.
 
-> 🏆 **Melhor modelo hoje: ensemble CatBoost base — AUC 0,741 / LogLoss 0,3477** no
-> holdout out-of-time de **2023** (82,96 milhões de vínculos). Chegou lá após
-> **descobrir e corrigir um bug de harmonização de códigos entre anos** que sozinho
-> valeu **+0,099 de AUC**. Detalhes em [`outputs/RELATORIO_modelo_2023.md`](outputs/RELATORIO_modelo_2023.md).
+> 🏆 **Modelo vigente: esteira 2124 (v2)** — ensemble CatBoost treinado em **2021–2024**
+> sobre o interim **leak-free** (743 mi de vínculos 2016–2025): **AUC 0,776 / KS 0,403
+> em 2025 (out-of-time puro)** e AUC 0,76–0,81 estável nos 10 anos. **14 categorias** de
+> risco com ordenação validada ano a ano, personas, sobrevivência MOB (ref. 21–24) e
+> tabelas de política de consignado — tudo com sufixo `_2124` (ver seção abaixo).
+>
+> Legado v1 (preservado): ensemble base AUC 0,741 no holdout 2023, após a correção de
+> harmonização de códigos (+0,099 AUC). Detalhes em
+> [`outputs/RELATORIO_modelo_2023.md`](outputs/RELATORIO_modelo_2023.md).
 
 Alvo padrão: `motivo_unificado == "involuntario_sjc"` (dispensa sem justa causa).
+
+---
+
+## Esteira atual — 2124 (modelo v2)
+
+Cadeia completa (cada etapa lê a anterior; sufixo `_2124` em scripts e saídas):
+
+| etapa | script | saída principal |
+|---|---|---|
+| 1. Interim leak-free 2016–2025 | `rebuild_interim.py` | `data/interim/rais/` (106 partições, 743 mi, 26 cols c/ `id_linha`) |
+| 2. Treino + eval 10 anos (pod H200) | `runpod/train_model_2124.py` | `outputs/runpod_retreino_2124/` (AUC/KS/LogLoss/Brier por ano) |
+| 3. Predict todos os anos | `predict_ensemble_2124_todos_anos.py` | `data/processed/predicoes_2124/` |
+| 4. Categorias (K\*=14, critério ano-a-ano) | `tune_bins_infogain_2124.py` + `add_categoria_risco_2124.py` | `binning_infogain_escolhido_2124.csv` + coluna `categoria_risco` |
+| 5. Auditoria categoria×ano | `resumo_categoria_ano_2124.py` | `categoria_ano_{n,taxa,share}_2124.csv` |
+| 6. Personas (geral + privado) | `persona_categorias_2124.py` | `persona_categorias_2124{,_privado}.csv` |
+| 7. Sobrevivência MOB (KM+Weibull+isotônica) | `sobrevivencia_mob_2124.py` | `sobrevivencia_*_mob_2124.csv` + figuras |
+| 8. Política de consignado | `tabelas_consignado_2124.py` | `consignado_{prazo_max,cobertura_parcelas}_2124.csv` |
+| 9. Decks | `gerar_apresentacao_2124.py` (PDF) · `gerar_apresentacao_html_2124.py` (HTML interativo) · `gerar_apresentacao_diretoria_2124.py` (executivo) | `outputs/apresentacao_*_2124.*` |
+
+Principais decisões da v2: features **sem vazamento de alvo** (tempo de vínculo medido na
+ENTRADA; afastamento por mês de exposição; `causa_afastamento` removida), ordinais como
+numéricas (99→-1), treino em 2021–2024 com **avaliação em todos os anos 2016–2025**
+(2025 = futuro puro), e categorias com monotonicidade exigida **dentro de cada safra**.
+Os artefatos da v1 (23 categorias, holdout 2023) seguem no repositório como legado.
 
 ---
 

@@ -17,10 +17,62 @@ analítica própria, sem pareamento de painel individual). Duas linhas coexistem
    com suavização Empirical Bayes + backoff hierárquico. Módulo `src/scoring.py`
    (`score_pessoa(...)`), tabelas em `data/processed/rates`.
 2. **Benchmark supervisionado (CatBoost)**: ensemble cross-temporal usado para medir
-   o teto de performance e validar features. **É o melhor modelo hoje.**
+   o teto de performance e validar features. **O modelo VIGENTE é a esteira 2124
+   (ver §1-B)**; o anterior (treino 2019–22, holdout 2023) está preservado como legado.
 
 Alvo padrão: `motivo_unificado == "involuntario_sjc"` (dispensa sem justa causa).
-Holdout out-of-time: **2023** (nunca usado em treino/early-stopping).
+(Legado v1: holdout 2023. Esteira 2124: avaliação em TODOS os anos 2016–2025;
+2025 = out-of-time puro.)
+
+---
+
+## 1-B. ESTEIRA ATUAL — "2124" (modelo v2, sufixo `_2124` em scripts/saídas)
+
+Cadeia completa, na ordem (cada etapa lê a saída da anterior):
+
+1. **Interim leak-free 2016–2025** (`rebuild_interim.py` → `data/interim/rais/ano=YYYY/`,
+   106 partições, 743.038.238 vínculos; backup do schema antigo em `rais_old_schema_bak`).
+   Schema (26 cols): `id_linha` (chave única `ano_regiao_nºlinha`), códigos CRUS
+   (escolaridade 1..11, faixas int64 com 99=ignorado), cbo zfill(6)/cnae zfill(7),
+   `tempo_vinculo_meses` = antiguidade NA ENTRADA (leak-free), `qtd_dias_afastamento`
+   = dias POR MÊS observado (leak-free), `mes_admissao` (0=vigente; 1-12), desfecho ao
+   final (`vinculo_ativo`, `mes_deslig`, `motivo_desligamento`, `motivo_unificado`).
+   SEM coluna `separado` (usar `vinculo_ativo==0`).
+2. **Treino** (`runpod/train_model_2124.py`, pod H200 ~$4,4/h): A fit 21-22/val 23-24;
+   B fit 23-24/val 21-22; ensemble=média. 21 features (14 cat + 7 num; ordinais
+   escolaridade/tamanho/faixas como NUMÉRICAS com 99→-1; SEM causa_afastamento).
+   Eval em 2016–2025 com AUC/KS/LogLoss/Brier → `outputs/runpod_retreino_2124/`
+   (`metricas_por_ano.csv`, calibracao_YYYY.csv, importancia, .cbm).
+   **Resultado: AUC 0,776 / KS 0,403 em 2025 (futuro puro); AUC 0,76–0,81 nos 10 anos.**
+3. **Predict todos os anos** (`predict_ensemble_2124_todos_anos.py`, local ~21min) →
+   `data/processed/predicoes_2124/ano=YYYY/` (id_linha + features + desfecho + y +
+   prob_A/B/prob_desligamento + categoria_risco).
+4. **Categorias** (`tune_bins_infogain_2124.py`, ref. 2021–24): PD maximiza I(bin;y) com
+   critério DUPLO — y médio estritamente crescente no pooled E em CADA ano 21–24 →
+   **K\*=14** (quebra em K=15/ano 2024; 99,1% do IG). Ordenação validada em TODOS os
+   anos 2016–2025 (`resumo_categoria_ano_2124.py`). Materialização in-place:
+   `add_categoria_risco_2124.py`. Bordas: `outputs/tables/binning_infogain_escolhido_2124.csv`.
+5. **Personas** (`persona_categorias_2124.py`, ref. 21–24, 1 passada p/ geral+privado) →
+   `persona_categorias_2124{,_privado}.csv`. Grupos de risco (decks): Mínimo[1],
+   Baixo[2-4], Médio-Baixo[5-7], Médio[8-10], Alto[11-14]. **Se mudar K, reescrever.**
+6. **Sobrevivência MOB** (`sobrevivencia_mob_2124.py`, ref. 21–24 agregados): KM ≤12 MOB
+   + Weibull cloglog >12 (R²=0,994) + isotônica (0 inversões — frailty quase sumiu) →
+   `sobrevivencia_*_mob_2124.csv` + figuras.
+7. **Política de consignado** (`tabelas_consignado_2124.py`): prazo máx. por confiança
+   95/90/85/80 + cobertura de parcelas T=6..60 → `consignado_*_2124.csv`.
+8. **Decks** (não substituem os antigos): `gerar_apresentacao_2124.py` (PDF 29 slides),
+   `gerar_apresentacao_html_2124.py` (HTML c/ B1/B2/B3 interativos + tabela C1),
+   `gerar_apresentacao_diretoria_2124.py` (executivo 6 slides). Figuras de apoio:
+   `fig_modelo_2124.py`.
+
+Aprendizados novos (não reintroduzir):
+- `tempo_vinculo_meses` da RAIS é medido no FIM do vínculo → vazava o "quando" do alvo
+  (corrigido p/ entrada); `qtd_dias_afastamento` truncado por exposição (corr +0,082 com
+  mes_deslig → taxa/mês = +0,018); `causa_afastamento` removida das features (mesmo leak).
+- Predições salvam ordinais como float32 (`9.0`) → consumidores devem normalizar
+  (`_s()` em persona_categorias_2124.py).
+- Aggs de lag antigos são INCOMPATÍVEIS com o interim novo (escolaridade era "superior",
+  agora código) — reconstruir build_aggs antes de qualquer prep_lags.
 
 ---
 
@@ -36,8 +88,12 @@ config.yaml     # anos, caminhos, binning, suavização, params do ml
 ```
 
 Dados-chave já materializados:
-- `data/interim/rais/ano=YYYY/<regiao>.parquet` — RAIS limpa nacional **2016–2023**
-  (90 partições, ~4,3 GB, 563M vínculos). 2016/2017 vêm por UF; 2018+ por região.
+- `data/interim/rais/ano=YYYY/<regiao>.parquet` — RAIS limpa nacional **2016–2025**
+  (106 partições, ~11 GB, 743M vínculos, schema leak-free 26 cols — ver §1-B).
+  2016/2017 vêm por UF; 2018+ por região (incl. NI 2022+). Backup do schema antigo
+  (2016–2023, 24 cols) em `data/interim/rais_old_schema_bak`.
+- `data/processed/predicoes_2124/ano=YYYY/` — predições categorizadas do modelo v2
+  (todos os anos, 15 GB).
 - `data/processed/lags/agg_<feature>.parquet` — 19 agregações (valor, ano, n, k_sjc)
   para as features de lag, **2016–2023, já com a normalização corrigida**.
 
@@ -59,7 +115,7 @@ Impacto: **+0,099 de AUC** no ensemble base (0,642 → 0,741) só com isso.
 
 ---
 
-## 4. Resultados (holdout 2023) — resumo
+## 4. Resultados (holdout 2023) — resumo [LEGADO v1; vigente = §1-B]
 
 Tabela completa: `outputs/tables/metricas_2023_consolidado.csv`.
 

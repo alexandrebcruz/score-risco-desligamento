@@ -1,0 +1,394 @@
+"""Deck HTML autossuficiente do MODELO NOVO (esteira 2124) — adaptação do motor de
+gerar_apresentacao_html_mob.py (NÃO substitui os decks antigos).
+
+- Slides estáticos: gerar_apresentacao_2124.py renderizado em SVG vetorial (texto
+  selecionável, fonte DejaVu embutida) e embutido inline (ids prefixados).
+- Slides interativos: B1 (curvas KM MOB), B2 (extrapolação Weibull até 36),
+  B3 (gráfico-caixa Q1/mediana/média/Q3) — dados _mob_2124, 14 categorias.
+- Slide C1 substituído por tabelas HTML nativas (prazo máx. + cobertura, _2124).
+
+Uso:  MPLCONFIGDIR=/tmp/mpl /tmp/consig_venv/bin/python gerar_apresentacao_html_2124.py
+Saída: outputs/apresentacao_risco_2124.html
+"""
+import os, runpy, json, shutil, re, math
+os.environ.setdefault("MPLCONFIGDIR", "/tmp/mpl")
+import pandas as pd
+import base64
+import matplotlib; matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+plt.rcParams["svg.fonttype"] = "none"
+from matplotlib import cm, colors
+
+DUMP = "/tmp/apresentacao_svg_2124"
+os.environ["DECK_DUMP_PNG"] = DUMP
+os.environ["DECK_DUMP_FMT"] = "svg"
+OUT = "outputs/apresentacao_risco_2124.html"
+TMP = "/tmp/apresentacao_risco_2124.html"
+
+# ---------- 1. roda o deck (gera PDF + dump SVG) ----------
+print("renderizando slides via gerar_apresentacao_2124.py ...")
+ns = runpy.run_path("gerar_apresentacao_2124.py")
+NP = len(ns["pages"])
+# índices: ...23=divisor B, 24=B1, 25=B2, 26=B3, 27=divisor C, 28=C1
+B1, B2, B3, C1 = NP - 5, NP - 4, NP - 3, NP - 1
+print(f"{NP} slides; interativos: B1={B1}, B2={B2}, B3={B3}, C1={C1}")
+
+def inline_svg(path, pfx):
+    s = open(path, encoding="utf-8").read()
+    s = re.sub(r"<\?xml[^>]*\?>", "", s)
+    s = re.sub(r"<!DOCTYPE.*?>", "", s, flags=re.S)
+    s = re.sub(r"<style[^>]*>.*?</style>", "", s, flags=re.S)
+    s = re.sub(r'\bid="([^"]+)"', lambda m: 'id="%s%s"' % (pfx, m.group(1)), s)
+    s = re.sub(r'href="#([^"]+)"', lambda m: 'href="#%s%s"' % (pfx, m.group(1)), s)
+    s = re.sub(r'url\(#([^)]+)\)', lambda m: 'url(#%s%s)' % (pfx, m.group(1)), s)
+    s = re.sub(r'(<svg\b[^>]*?)\s+width="[^"]*"', r'\1', s, count=1)
+    s = re.sub(r'(<svg\b[^>]*?)\s+height="[^"]*"', r'\1', s, count=1)
+    s = re.sub(r'<svg\b', '<svg class="deckslide" preserveAspectRatio="xMidYMid meet"', s, count=1)
+    return s.strip()
+
+# ---------- 2. dados de sobrevivência (_mob_2124) ----------
+km = pd.read_csv("outputs/tables/sobrevivencia_km_mob_2124.csv").rename(columns={"mob": "mes"})
+ext = pd.read_csv("outputs/tables/sobrevivencia_weibull_extrap_mob_2124.csv")
+mono = pd.read_csv("outputs/tables/sobrevivencia_weibull_estatisticas_mono_mob_2124.csv").set_index("categoria")
+res = pd.read_csv("outputs/tables/sobrevivencia_resumo_mob_2124.csv").set_index("categoria")
+ks = sorted(km["categoria"].unique())
+cmap = matplotlib.colormaps["RdYlGn_r"]; norm = colors.Normalize(vmin=min(ks), vmax=max(ks))
+cor = {k: colors.to_hex(cmap(norm(k))) for k in ks}
+def _contraste(hx):
+    r, g, b = (int(hx[i:i + 2], 16) for i in (1, 3, 5))
+    return "#000000" if 0.299 * r + 0.587 * g + 0.114 * b > 150 else "#ffffff"
+
+series = []
+for k in ks:
+    S = [round(float(v), 5) for v in km[km.categoria == k].sort_values("mes")["S"].tolist()]
+    Wv = [round(float(v), 5) for v in ext[ext.categoria == k].sort_values("mes")["S_weibull"].tolist()]
+    mo = mono.loc[k]
+    series.append({"k": int(k), "cor": cor[k], "txt": _contraste(cor[k]), "S": S, "W": Wv,
+                   "risco12": round(float(res.loc[k, "risco_deslig_12m_KM"]) * 100, 1),
+                   "q1": round(float(mo["q1_meses_mono"]), 1),
+                   "medm": round(float(mo["mediana_meses_mono"]), 1),
+                   "media": round(float(mo["media_meses_mono"]), 1),
+                   "q3": round(float(mo["q3_meses_mono"]), 1)})
+DATA = json.dumps(series, ensure_ascii=False)
+GROUPS = [("Mínimo", [1], "#1a9850"), ("Baixo", [2, 3, 4], "#86cb66"),
+          ("Médio-Baixo", [5, 6, 7], "#c9a227"), ("Médio", [8, 9, 10], "#fb8d3d"),
+          ("Alto", [11, 12, 13, 14], "#d73027")]
+GROUPS_JSON = json.dumps([{"nome": n, "cats": c, "cor": col} for n, c, col in GROUPS], ensure_ascii=False)
+
+# fonte DejaVu embutida
+_TTF = os.path.join(matplotlib.get_data_path(), "fonts", "ttf")
+def _face(fname, weight):
+    b = base64.b64encode(open(os.path.join(_TTF, fname), "rb").read()).decode()
+    return ("@font-face{font-family:'DejaVu Sans';font-style:normal;font-weight:%s;"
+            "src:url(data:font/ttf;base64,%s) format('truetype');}" % (weight, b))
+FONTS = _face("DejaVuSans.ttf", "400") + _face("DejaVuSans-Bold.ttf", "700")
+
+# ---------- 3. slides interativos ----------
+def bullets_html(items):
+    out = []
+    for b, t in items:
+        out.append((f'<div class="b"><span class="bi">▸</span>{t}</div>') if b else f'<div class="bh">{t}</div>')
+    return "\n".join(out)
+
+B1_TXT = bullets_html([
+    (False, "A ideia"),
+    (True, "O modelo prevê QUEM/SE é desligado; a sobrevivência mede QUANDO."),
+    (True, "S(t) = prob. de seguir empregado t meses após a ENTRADA (relógio MOB)."),
+    (False, "Dos microdados (RAIS 2021–2024 agrupados)"),
+    (True, "Evento = dispensa s/ justa causa; censura = ativo ou saída por outro motivo."),
+    (True, "Pré-existente entra em janeiro; admitido no ano entra no mês de admissão."),
+    (False, "Kaplan–Meier"),
+    (True, "S(t) = Π (nₘ−dₘ)/nₘ — usa a censura sem viés, mês a mês."),
+    (True, "4 safras agregadas → sazonalidade de calendário diluída."),
+])
+B2_TXT = bullets_html([
+    (False, "O problema"),
+    (True, "12 meses de dado não enxergam além de 12m (a curva ainda está alta)."),
+    (False, "Solução: forma paramétrica de Weibull"),
+    (True, "S(t) = exp(−(t/λ)ᵖ);  hazard ∝ t^(p−1)."),
+    (True, "Ajuste por regressão pura: ln(−ln S) = p·ln t + ln α (OLS, 12 pts)."),
+    (True, "R² médio ≈ 0,994 — extrapola até 36 MOB (tracejado)."),
+    (False, "Qualidade nesta versão"),
+    (True, "Q1/mediana/média/Q3 monotônicos SEM ajuste (0 inversões); projeção >12m é suposição."),
+])
+
+def interactive_slide(kicker, title, txt, chart_id):
+    return f'''<div class="slide cust">
+  <div class="hb"><span class="kick">{kicker}</span><span class="ttl">{title}</span></div>
+  <div class="txt">{txt}</div>
+  <div class="chartwrap">
+    <div class="ctrls"><div class="grp" id="grp-{chart_id}"></div><div class="chips" id="chips-{chart_id}"></div></div>
+    <svg id="svg-{chart_id}" viewBox="0 0 760 470" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+</div>'''
+
+def box_slide():
+    return '''<div class="slide cust">
+  <div class="hb"><span class="kick">TEMPO ATÉ O DESLIGAMENTO · ESTATÍSTICAS</span><span class="ttl">Q1, mediana, média e Q3 por categoria — MOB, ref. 2021–2024 (meses)</span></div>
+  <div class="boxwrap"><svg id="svg-box" viewBox="0 0 600 470" preserveAspectRatio="xMidYMid meet"></svg></div>
+  <div class="boxtable" id="boxtable"></div>
+  <div class="boxhint">Passe o mouse numa categoria (caixa ou linha) para ver os dados</div>
+</div>'''
+
+# ---------- C1: tabelas de política (HTML nativo) ----------
+PRAZO = pd.read_csv("outputs/tables/consignado_prazo_max_2124.csv")
+COB = pd.read_csv("outputs/tables/consignado_cobertura_parcelas_2124.csv")
+def _heat(frac): return "hsl(%d,62%%,87%%)" % round(max(0.0, min(1.0, frac)) * 120)
+def _catcell(k): return '<td class="ct" style="background:%s;color:%s">%d</td>' % (cor[k], _contraste(cor[k]), k)
+def _termo_tbl():
+    h = "<tr><th>cat</th><th>95%</th><th>90%</th><th>85%</th><th>80%</th></tr>"
+    body = ""
+    for _, r in PRAZO.iterrows():
+        k = int(r.categoria); cells = ""
+        for c in ("conf_95", "conf_90", "conf_85", "conf_80"):
+            v = float(r[c]); disp = "120+" if v > 120 else f"{v:.0f}"
+            cells += '<td style="background:%s">%s</td>' % (_heat(min(v, 36) / 36), disp)
+        body += "<tr>" + _catcell(k) + cells + "</tr>"
+    return '<table class="aptbl"><thead>%s</thead><tbody>%s</tbody></table>' % (h, body)
+def _cov_tbl():
+    TS = [6, 12, 18, 24, 36, 48, 60]
+    h = "<tr><th>cat</th>" + "".join(f"<th>T={t}</th>" for t in TS) + "</tr>"
+    body = ""
+    for _, r in COB.iterrows():
+        k = int(r.categoria)
+        cells = "".join('<td style="background:%s">%.0f%%</td>' % (_heat(r[f"T_{t}"] / 100), r[f"T_{t}"]) for t in TS)
+        body += "<tr>" + _catcell(k) + cells + "</tr>"
+    return '<table class="aptbl"><thead>%s</thead><tbody>%s</tbody></table>' % (h, body)
+TERMO_TBL, COV_TBL = _termo_tbl(), _cov_tbl()
+
+def consig_tables_slide():
+    return ('<div class="slide cust"><div class="hb"><span class="kick">REFERÊNCIA PARA A POLÍTICA DE CONCESSÃO</span>'
+            '<span class="ttl">Prazo máximo e cobertura de parcelas por categoria (14 faixas, ref. 2021–2024)</span></div>'
+            '<div class="aptwrap-l"><div class="apt-h">Prazo máx. (meses) por confiança de seguir empregado</div>' + TERMO_TBL +
+            '<div class="apt-note">t = λ·(−ln c)^(1/p) · inteiros · cap "120+"</div></div>'
+            '<div class="aptwrap-r"><div class="apt-h">Cobertura esperada de parcelas (% pagas em folha) por prazo T</div>' + COV_TBL +
+            '<div class="apt-note">Σ S(m)/T · S = KM MOB (≤12) + Weibull (&gt;12) · ref. 2021–2024 · &gt;12m é projeção</div></div></div>')
+
+# ---------- 4. monta os slides ----------
+slides = []
+for i in range(NP):
+    if i == B1:
+        slides.append(interactive_slide("TEMPO ATÉ O DESLIGAMENTO · SOBREVIVÊNCIA",
+                      "Curvas de sobrevivência por categoria — MOB, ref. 2021–2024 (Kaplan-Meier)", B1_TXT, "km"))
+    elif i == B2:
+        slides.append(interactive_slide("TEMPO ATÉ O DESLIGAMENTO · EXTRAPOLAÇÃO",
+                      "Extrapolação Weibull das curvas (até 36 MOB)", B2_TXT, "weib"))
+    elif i == B3:
+        slides.append(box_slide())
+    elif i == C1:
+        slides.append(consig_tables_slide())
+    else:
+        slides.append(f'<div class="slide">{inline_svg(f"{DUMP}/slide_{i:02d}.svg", f"s{i:02d}_")}</div>')
+SLIDES = "\n".join(slides)
+
+# ---------- 5. template ----------
+HTML = r"""<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<title>Risco de Desligamento — apresentação (esteira 2124)</title>
+<style>
+  __FONTS__
+  :root{ --navy:#14233f; --ink:#1b2430; --grey:#5b6675; }
+  *{box-sizing:border-box;} html,body{margin:0;height:100%;background:#0d1626;font-family:'DejaVu Sans',-apple-system,Segoe UI,Roboto,Arial,sans-serif;}
+  .deck{height:100vh;height:100dvh;display:flex;align-items:center;justify-content:center;}
+  .stage{position:relative;width:min(100vw,177.78vh);height:min(56.25vw,100vh);
+         width:min(100vw,177.78dvh);height:min(56.25vw,100dvh);--u:min(1vw,1.7778vh);
+         background:#fff;box-shadow:0 6px 30px rgba(0,0,0,.5);overflow:hidden;}
+  .slide{position:absolute;inset:0;display:none;}
+  .slide.active{display:block;}
+  .deckslide{position:absolute;inset:0;width:100%;height:100%;}
+  .deckslide *{stroke-linejoin:round;stroke-linecap:butt;}
+  .cust{background:#fff;}
+  .hb{position:absolute;top:0;left:0;right:0;height:14%;background:var(--navy);border-left:6px solid #f4a722;
+      display:flex;flex-direction:column;justify-content:center;padding-left:2.6%;}
+  .kick{color:#9fc0e8;font-weight:bold;letter-spacing:.04em;font-size:calc(var(--u)*1.20);}
+  .ttl{color:#fff;font-weight:bold;font-size:calc(var(--u)*1.9);}
+  .txt{position:absolute;left:3.5%;top:19%;width:38%;}
+  .bh{font-weight:bold;color:var(--ink);font-size:calc(var(--u)*1.31);margin:calc(var(--u)*0.95) 0 calc(var(--u)*0.2);}
+  .b{color:var(--ink);font-size:calc(var(--u)*1.31);margin:calc(var(--u)*0.28) 0;padding-left:1.5em;text-indent:-1.5em;line-height:1.3;}
+  .bi{color:#f4a722;font-weight:bold;margin-right:.5em;}
+  .chartwrap{position:absolute;left:43%;top:16%;width:55%;height:80%;display:flex;flex-direction:column;}
+  .ctrls{flex:0 0 auto;margin-bottom:.4vh;}
+  .grp{display:flex;flex-wrap:wrap;gap:calc(var(--u)*0.35);margin-bottom:calc(var(--u)*0.35);}
+  .grp button{font-size:calc(var(--u)*0.92);padding:calc(var(--u)*0.12) calc(var(--u)*0.6);border-radius:5px;border:1px solid #bbb;background:#f7f7f7;cursor:pointer;font-weight:600;}
+  .chips{display:flex;flex-wrap:wrap;gap:calc(var(--u)*0.2);}
+  .chip{width:calc(var(--u)*1.9);height:calc(var(--u)*1.5);border-radius:4px;border:1.5px solid var(--c);
+        background:var(--c);color:#fff;font-size:calc(var(--u)*0.82);font-weight:700;cursor:pointer;padding:0;line-height:1;}
+  .chip.off{background:#fff;color:#bbb;border-color:#ddd;}
+  .chartwrap svg{flex:1 1 auto;width:100%;min-height:0;}
+  .boxwrap{position:absolute;left:2%;top:15.5%;width:60%;height:82%;}
+  .boxwrap svg{width:100%;height:100%;}
+  .box{cursor:pointer;}
+  .boxtable{position:absolute;right:2.5%;top:15.5%;width:33%;height:80%;overflow:auto;
+            display:flex;flex-direction:column;justify-content:center;}
+  .boxtable table{border-collapse:collapse;width:100%;font-size:calc(var(--u)*1.0);font-variant-numeric:tabular-nums;}
+  .boxtable th{background:var(--navy);color:#fff;padding:calc(var(--u)*0.18) calc(var(--u)*0.25);position:sticky;top:0;}
+  .boxtable td{padding:calc(var(--u)*0.14) calc(var(--u)*0.25);text-align:center;border-bottom:1px solid #eee;}
+  .boxtable td.ct{color:#fff;font-weight:700;}
+  .boxtable tr.hl td{background:#fff3cf;}
+  .boxtable tr.hl td.ct{filter:brightness(.85);}
+  .boxhint{position:absolute;left:2%;bottom:2.5%;color:var(--grey);font-size:calc(var(--u)*0.9);}
+  .aptwrap-l{position:absolute;left:2%;top:15.5%;width:31%;height:80%;overflow:auto;display:flex;flex-direction:column;justify-content:center;}
+  .aptwrap-r{position:absolute;left:35%;top:15.5%;width:63%;height:80%;overflow:auto;display:flex;flex-direction:column;justify-content:center;}
+  .apt-h{font-weight:700;font-size:calc(var(--u)*1.0);color:var(--navy);margin-bottom:.35em;line-height:1.2;}
+  .apt-note{font-size:calc(var(--u)*0.82);color:var(--grey);margin-top:.35em;}
+  .aptbl{border-collapse:collapse;width:100%;font-size:calc(var(--u)*0.95);font-variant-numeric:tabular-nums;}
+  .aptbl th{background:var(--navy);color:#fff;padding:2px 4px;position:sticky;top:0;font-weight:600;}
+  .aptbl td{padding:2px 5px;text-align:center;border:1px solid #fff;}
+  .aptbl td.ct{font-weight:700;}
+  .grid{stroke:#e6e6e6;stroke-width:1;} .ax{stroke:#999;stroke-width:1;} .tk{fill:#666;font-size:11px;} .al{fill:#1b2430;font-size:12px;}
+  .cv{fill:none;stroke-width:1.7;} .ext{fill:none;stroke-width:1.4;stroke-dasharray:5 4;} .dt{stroke:#fff;stroke-width:.5;}
+  .bound{stroke:#999;stroke-width:1;stroke-dasharray:2 3;} .guide{stroke:#888;stroke-dasharray:4 3;stroke-width:1;visibility:hidden;}
+  .nav{position:absolute;top:1.6%;right:1.6%;display:flex;align-items:center;gap:10px;z-index:50;
+       background:rgba(40,60,95,.92);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:18px;padding:4px 12px;font-size:13px;}
+  .nav button{background:none;border:none;color:#fff;font-size:19px;cursor:pointer;line-height:1;padding:0 5px;}
+  .nav button:hover{color:#f4a722;}
+  #tip{position:fixed;pointer-events:none;background:#111;color:#fff;font-size:11.5px;padding:8px 10px;border-radius:7px;
+       max-width:250px;visibility:hidden;z-index:99;line-height:1.4;box-shadow:0 2px 10px rgba(0,0,0,.35);}
+  #tip .tt-h{font-weight:700;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #555;}
+  #tip .tt-r{display:flex;justify-content:space-between;gap:18px;line-height:1.55;}
+  #tip .tt-r span{color:#aab2c0;}
+  #tip .tt-r b{font-variant-numeric:tabular-nums;}
+</style></head>
+<body>
+<div class="deck"><div class="stage" id="stage">
+__SLIDES__
+  <div class="nav"><button onclick="go(-1)" title="anterior (←)">‹</button><span id="counter"></span><button onclick="go(1)" title="próximo (→)">›</button></div>
+</div></div>
+<div id="tip"></div>
+<script>
+const DATA=__DATA__, GROUPS=__GROUPS__;
+const slides=[...document.querySelectorAll('.slide')]; let cur=0;
+const counter=document.getElementById('counter');
+function show(n){ cur=Math.max(0,Math.min(slides.length-1,n));
+  slides.forEach((s,i)=>s.classList.toggle('active',i===cur));
+  counter.textContent=(cur+1)+' / '+slides.length; }
+function go(d){ show(cur+d); }
+document.addEventListener('keydown',e=>{ if(e.key==='ArrowRight'||e.key==='PageDown')go(1);
+  else if(e.key==='ArrowLeft'||e.key==='PageUp')go(-1);
+  else if(e.key==='Home')show(0); else if(e.key==='End')show(slides.length-1); });
+show(0);
+
+const tip=document.getElementById('tip');
+function makeChart(svgId, chipsId, grpId, showExt, xmax){
+  const svg=document.getElementById(svgId), chips=document.getElementById(chipsId), grp=document.getElementById(grpId);
+  if(!svg) return;
+  const NS='http://www.w3.org/2000/svg', W=760,HT=470,M={l:54,r:12,t:10,b:38},PW=W-M.l-M.r,PH=HT-M.t-M.b,H=12;
+  let yMin=0,yMax=1;
+  const xPix=m=>M.l+(m/xmax)*PW, yPix=s=>M.t+(1-(s-yMin)/(yMax-yMin))*PH;
+  function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+  const visible=new Set(DATA.map(s=>s.k));
+  const guide=el('line',{class:'guide',y1:M.t,y2:M.t+PH});
+  function domain(){ if(!visible.size){yMin=0;yMax=1;return;} let lo=1;
+    DATA.forEach(s=>{ if(!visible.has(s.k))return; for(const v of s.S)if(v<lo)lo=v;
+      if(showExt)for(let m=H;m<=xmax;m++)if(s.W[m]<lo)lo=s.W[m]; });
+    const pad=0.04*(1-lo)+0.005; yMin=Math.max(0,lo-pad); yMax=1; }
+  function axes(){ const range=yMax-yMin,dec=range<0.04?3:2,NT=5;
+    for(let i=0;i<=NT;i++){const s=yMin+range*i/NT,y=yPix(s);
+      svg.appendChild(el('line',{class:'grid',x1:M.l,y1:y,x2:W-M.r,y2:y}));
+      const t=el('text',{class:'tk',x:M.l-6,y:y+3,'text-anchor':'end'});t.textContent=s.toFixed(dec);svg.appendChild(t);}
+    const step=xmax>12?3:1;
+    for(let m=0;m<=xmax;m+=step){const x=xPix(m);
+      svg.appendChild(el('line',{class:'grid',x1:x,y1:M.t,x2:x,y2:M.t+PH}));
+      const t=el('text',{class:'tk',x:x,y:M.t+PH+15,'text-anchor':'middle'});t.textContent=m;svg.appendChild(t);}
+    if(showExt){const xv=xPix(H);svg.appendChild(el('line',{class:'bound',x1:xv,y1:M.t,x2:xv,y2:M.t+PH}));}
+    svg.appendChild(el('line',{class:'ax',x1:M.l,y1:M.t,x2:M.l,y2:M.t+PH}));
+    svg.appendChild(el('line',{class:'ax',x1:M.l,y1:M.t+PH,x2:W-M.r,y2:M.t+PH}));
+    const yl=el('text',{class:'al','text-anchor':'middle',transform:'translate(14,'+(M.t+PH/2)+') rotate(-90)'});yl.textContent='S(t) = P(seguir empregado)';svg.appendChild(yl);
+    const xl=el('text',{class:'al',x:M.l+PW/2,y:HT-4,'text-anchor':'middle'});xl.textContent='MOB — meses desde a entrada';svg.appendChild(xl);
+  }
+  function lpath(arr,m0,m1){let d='M '+xPix(m0)+' '+yPix(arr[m0]);for(let m=m0+1;m<=m1;m++)d+=' L '+xPix(m)+' '+yPix(arr[m]);return d;}
+  function curves(){ DATA.forEach(s=>{ if(!visible.has(s.k))return;
+    if(showExt)svg.appendChild(el('path',{class:'ext',d:lpath(s.W,H,xmax),stroke:s.cor}));
+    svg.appendChild(el('path',{class:'cv',d:lpath(s.S,0,H),stroke:s.cor}));
+    for(let m=0;m<=H;m++)svg.appendChild(el('circle',{class:'dt',cx:xPix(m),cy:yPix(s.S[m]),r:2.4,fill:s.cor})); }); }
+  function syncChips(){ chips.querySelectorAll('.chip').forEach(c=>c.classList.toggle('off',!visible.has(+c.dataset.k))); }
+  function render(){ svg.innerHTML=''; domain(); axes(); curves(); svg.appendChild(guide); syncChips(); }
+  DATA.forEach(s=>{ const b=document.createElement('button'); b.className='chip'; b.dataset.k=s.k; b.textContent=s.k;
+    b.style.setProperty('--c',s.cor);
+    b.onclick=()=>{ if(visible.has(s.k))visible.delete(s.k); else visible.add(s.k); render(); }; chips.appendChild(b); });
+  function gbtn(label,fn,col){ const b=document.createElement('button'); b.textContent=label; if(col){b.style.borderColor=col;b.style.color=col;} b.onclick=fn; grp.appendChild(b); }
+  gbtn('Todos',()=>{DATA.forEach(s=>visible.add(s.k));render();});
+  gbtn('Nenhum',()=>{visible.clear();render();});
+  GROUPS.forEach(g=>gbtn(g.nome,()=>{visible.clear();g.cats.forEach(k=>visible.add(k));render();},g.cor));
+  svg.addEventListener('mousemove',ev=>{ const r=svg.getBoundingClientRect(); const sx=(ev.clientX-r.left)*(W/r.width);
+    let m=Math.round((sx-M.l)/PW*xmax); m=Math.max(0,Math.min(xmax,m));
+    if(sx<M.l-4||sx>W-M.r+4){tip.style.visibility='hidden';guide.style.visibility='hidden';return;}
+    guide.setAttribute('x1',xPix(m));guide.setAttribute('x2',xPix(m));guide.style.visibility='visible';
+    const val=s=>m<=H?s.S[m]:s.W[m];
+    const vis=DATA.filter(s=>visible.has(s.k)).sort((a,b)=>val(b)-val(a));
+    if(!vis.length){tip.style.visibility='hidden';return;}
+    let html='<b>MOB '+m+'</b>'+(m>H?' (Weibull)':'')+'<br>';
+    vis.slice(0,14).forEach(s=>{html+='<span style="color:'+s.cor+'">■</span> Cat '+s.k+': <b>'+(val(s)*100).toFixed(1)+'%</b><br>';});
+    tip.innerHTML=html; tip.style.left=Math.min(ev.clientX+12,window.innerWidth-190)+'px'; tip.style.top=(ev.clientY+12)+'px'; tip.style.visibility='visible';
+  });
+  svg.addEventListener('mouseleave',()=>{tip.style.visibility='hidden';guide.style.visibility='hidden';});
+  render();
+}
+makeChart('svg-km','chips-km','grp-km',false,12);
+makeChart('svg-weib','chips-weib','grp-weib',true,36);
+
+function makeBoxChart(){
+  const svg=document.getElementById('svg-box'); if(!svg) return;
+  const NS='http://www.w3.org/2000/svg', W=600,HT=470,M={l:40,r:10,t:14,b:26},PW=W-M.l-M.r,PH=HT-M.t-M.b;
+  const n=DATA.length, fmt=v=>Math.round(v);
+  const vmax=Math.max(...DATA.map(s=>s.q3)), vmin=Math.min(...DATA.map(s=>s.q1));
+  const l0=Math.log10(Math.max(1,vmin*0.6)), l1=Math.log10(vmax*1.7);
+  const yPix=v=>M.t+(1-(Math.log10(Math.max(v,1e-6))-l0)/(l1-l0))*PH;
+  const xC=k=>M.l+((k-1)+0.5)/n*PW, bw=0.62*PW/n;
+  function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+  GROUPS.forEach(g=>{ const x0=xC(g.cats[0])-bw/2-2, x1=xC(g.cats[g.cats.length-1])+bw/2+2;
+    svg.appendChild(el('rect',{x:x0,y:M.t,width:x1-x0,height:PH,fill:g.cor,opacity:0.08}));
+    const t=el('text',{x:(x0+x1)/2,y:M.t+9,'text-anchor':'middle','font-size':8,'font-weight':'bold',fill:g.cor}); t.textContent='Risco '+g.nome; svg.appendChild(t); });
+  [10,100,1000].forEach(v=>{ if(Math.log10(v)<l0||Math.log10(v)>l1) return;
+    const y=yPix(v); svg.appendChild(el('line',{x1:M.l,y1:y,x2:W-M.r,y2:y,stroke:'#e6e6e6'}));
+    const t=el('text',{x:M.l-5,y:y+3,'text-anchor':'end','font-size':9,fill:'#666'}); t.textContent=v; svg.appendChild(t); });
+  [[12,'12m'],[24,'24m'],[36,'36m']].forEach(a=>{ const y=yPix(a[0]); if(y<M.t||y>M.t+PH) return;
+    svg.appendChild(el('line',{x1:M.l,y1:y,x2:W-M.r,y2:y,stroke:'#999','stroke-dasharray':'3 2','stroke-width':0.8}));
+    const t=el('text',{x:M.l+2,y:y-2,'font-size':7.5,fill:'#777'}); t.textContent=a[1]; svg.appendChild(t); });
+  svg.appendChild(el('line',{x1:M.l,y1:M.t,x2:M.l,y2:M.t+PH,stroke:'#999'}));
+  svg.appendChild(el('line',{x1:M.l,y1:M.t+PH,x2:W-M.r,y2:M.t+PH,stroke:'#999'}));
+  const yl=el('text',{'text-anchor':'middle','font-size':8.5,fill:'#1b2430',transform:'translate(11,'+(M.t+PH/2)+') rotate(-90)'}); yl.textContent='tempo até desligamento (meses, log)'; svg.appendChild(yl);
+  const boxes={};
+  DATA.forEach(s=>{ const x=xC(s.k), c=s.cor;
+    const g=el('g',{class:'box','data-k':s.k});
+    g.appendChild(el('rect',{x:x-bw/2,y:yPix(s.q3),width:bw,height:yPix(s.q1)-yPix(s.q3),fill:c,'fill-opacity':0.45,stroke:c,'stroke-width':1,class:'bx'}));
+    g.appendChild(el('line',{x1:x-bw/2,y1:yPix(s.medm),x2:x+bw/2,y2:yPix(s.medm),stroke:'#222','stroke-width':1.6}));
+    const my=yPix(s.media),d=3; g.appendChild(el('path',{d:'M '+x+' '+(my-d)+' L '+(x+d)+' '+my+' L '+x+' '+(my+d)+' L '+(x-d)+' '+my+' Z',fill:'#fff',stroke:'#222','stroke-width':1}));
+    const t=el('text',{x:x,y:M.t+PH+9,'text-anchor':'middle','font-size':7.5,fill:'#666'}); t.textContent=s.k; svg.appendChild(t);
+    g.appendChild(el('rect',{x:x-bw/2-1,y:M.t,width:bw+2,height:PH,fill:'transparent'}));
+    g.addEventListener('mouseenter',()=>boxHov(s.k,true));
+    g.addEventListener('mouseleave',()=>boxHov(s.k,false));
+    boxes[s.k]=g; svg.appendChild(g);
+  });
+  const tb=document.getElementById('boxtable');
+  let html='<table><thead><tr><th>cat</th><th>Q1</th><th>mediana</th><th>média</th><th>Q3</th></tr></thead><tbody>';
+  DATA.forEach(s=>{ html+='<tr data-k="'+s.k+'"><td class="ct" style="background:'+s.cor+';color:'+s.txt+'">'+s.k+'</td><td>'+fmt(s.q1)+'</td><td>'+fmt(s.medm)+'</td><td>'+fmt(s.media)+'</td><td>'+fmt(s.q3)+'</td></tr>'; });
+  tb.innerHTML=html+'</tbody></table>';
+  tb.querySelectorAll('tr[data-k]').forEach(r=>{ const k=+r.dataset.k;
+    r.addEventListener('mouseenter',()=>boxHov(k,true)); r.addEventListener('mouseleave',()=>boxHov(k,false)); });
+  function boxHov(k,on){
+    const g=boxes[k]; if(g){ const bx=g.querySelector('.bx'); bx.setAttribute('stroke-width',on?2.6:1); bx.setAttribute('fill-opacity',on?0.7:0.45); }
+    const row=tb.querySelector('tr[data-k="'+k+'"]'); if(row) row.classList.toggle('hl',on);
+    if(on){ const s=DATA.find(d=>d.k===k), r=svg.getBoundingClientRect(), gr=GROUPS.find(x=>x.cats.includes(k));
+      const row2=(l,v)=>'<div class="tt-r"><span>'+l+'</span><b>'+v+'</b></div>';
+      tip.innerHTML='<div class="tt-h">Categoria '+k+(gr?' · Risco '+gr.nome:'')+'</div>'+
+        row2('Risco em 12 MOB', s.risco12+'%')+
+        row2('Q1 (25%)', fmt(s.q1)+' meses')+
+        row2('Mediana (50%)', fmt(s.medm)+' meses')+
+        row2('Média', fmt(s.media)+' meses')+
+        row2('Q3 (75%)', fmt(s.q3)+' meses');
+      tip.style.left=Math.min(r.left+xC(k)/W*r.width+10,window.innerWidth-260)+'px';
+      tip.style.top=(r.top+yPix(s.q3)/HT*r.height-8)+'px'; tip.style.visibility='visible';
+    } else tip.style.visibility='hidden';
+  }
+}
+makeBoxChart();
+</script>
+</body></html>"""
+
+HTML = (HTML.replace("__FONTS__", FONTS).replace("__SLIDES__", SLIDES)
+            .replace("__DATA__", DATA).replace("__GROUPS__", GROUPS_JSON))
+with open(TMP, "w", encoding="utf-8") as f:
+    f.write(HTML)
+shutil.copy(TMP, OUT)
+print(f"FIM -> {OUT} ({len(HTML)/1024/1024:.1f} MB, {NP} slides, interativos B1/B2/B3 + tabela C1)")
