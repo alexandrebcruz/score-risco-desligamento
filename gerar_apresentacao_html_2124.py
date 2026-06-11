@@ -164,6 +164,34 @@ def _face(fname, weight):
             "src:url(data:font/ttf;base64,%s) format('truetype');}" % (weight, b))
 FONTS = _face("DejaVuSans.ttf", "400") + _face("DejaVuSans-Bold.ttf", "700")
 
+# ---------- helper: fórmula LaTeX -> SVG inline (mathtext, vetorial, alinhado à baseline) ----------
+import io as _io
+plt.rcParams.update({"mathtext.fontset": "dejavusans", "mathtext.default": "it"})
+_MTEX_N = [0]
+def mtex(tex, color="#1b2430", fs=20):
+    fig = plt.figure(dpi=72); fig.patch.set_alpha(0)
+    t = fig.text(0.0, 0.0, f"${tex}$", fontsize=fs, color=color)
+    fig.canvas.draw()
+    w, h, d = fig.canvas.get_renderer().get_text_width_height_descent(
+        f"${tex}$", t.get_fontproperties(), ismath=True)
+    buf = _io.StringIO()
+    fig.savefig(buf, format="svg", bbox_inches="tight", pad_inches=0.01, transparent=True)
+    plt.close(fig)
+    svg = buf.getvalue()
+    svg = re.sub(r"<\?xml.*?\?>", "", svg, flags=re.S)
+    svg = re.sub(r"<!DOCTYPE.*?>", "", svg, flags=re.S)
+    svg = re.sub(r"<metadata>.*?</metadata>", "", svg, flags=re.S)
+    _MTEX_N[0] += 1; pfx = "mq%d_" % _MTEX_N[0]   # ids únicos p/ não colidir entre fórmulas
+    svg = re.sub(r'\bid="([^"]+)"', lambda m: 'id="%s%s"' % (pfx, m.group(1)), svg)
+    svg = re.sub(r'href="#([^"]+)"', lambda m: 'href="#%s%s"' % (pfx, m.group(1)), svg)
+    svg = re.sub(r"url\(#([^)]+)\)", lambda m: "url(#%s%s)" % (pfx, m.group(1)), svg)
+    svg = re.sub(r'(<svg[^>]*?)\s+width="[^"]*"', r"\1", svg, count=1)
+    svg = re.sub(r'(<svg[^>]*?)\s+height="[^"]*"', r"\1", svg, count=1)
+    svg = re.sub(r"<svg ",
+                 '<svg class="mtex" style="height:%.3fem;vertical-align:%.3fem;width:auto" '
+                 % (h / fs, -d / fs), svg, count=1)
+    return svg.strip()
+
 # ---------- 3. slides interativos ----------
 def bullets_html(items):
     out = []
@@ -179,15 +207,15 @@ B1_TXT = bullets_html([
     (True, "Evento = dispensa s/ justa causa; censura = ativo ou saída por outro motivo."),
     (True, "Pré-existente entra em janeiro; admitido no ano entra no mês de admissão."),
     (False, "Kaplan–Meier"),
-    (True, "S(t) = Π (nₘ−dₘ)/nₘ — usa a censura sem viés, mês a mês."),
+    (True, mtex(r"S(t)=\prod_m (n_m-d_m)/n_m") + " — usa a censura sem viés, mês a mês."),
     (True, "4 safras agregadas → sazonalidade de calendário diluída."),
 ])
 B2_TXT = bullets_html([
     (False, "O problema"),
     (True, "12 meses de dado não enxergam além de 12m (a curva ainda está alta)."),
     (False, "Solução: forma paramétrica de Weibull"),
-    (True, "S(t) = exp(−(t/λ)ᵖ);  hazard ∝ t^(p−1)."),
-    (True, "Ajuste por regressão pura: ln(−ln S) = p·ln t + ln α (OLS, 12 pts)."),
+    (True, mtex(r"S(t)=\exp(-(t/\lambda)^{p})") + "; hazard " + mtex(r"\propto t^{\,p-1}") + "."),
+    (True, "Ajuste por regressão pura: " + mtex(r"\ln(-\ln S)=p\,\ln t+\ln\alpha") + " (OLS, 12 pts)."),
     (True, "R² médio ≈ 0,994 — extrapola até 36 MOB (tracejado)."),
     (False, "Qualidade do ajuste"),
     (True, "Q1/mediana/média/Q3 monotônicos sem ajuste (0 inversões); projeção >12m é suposição."),
@@ -283,7 +311,7 @@ def taxa_table_slide():
             '<button class="taxbtn" id="tax-btn" onclick="toggleTaxa()">Ver % ao ano →</button></div>'
             '<div id="tax-m">' + TAXA_TBL_M + '</div>'
             '<div id="tax-a" style="display:none">' + TAXA_TBL_A + '</div>'
-            '<div class="apt-note">Piso de quebra-zero: recebido nominal esperado = A·Σ S(m) ≥ principal '
+            '<div class="apt-note">Piso de quebra-zero: recebido nominal esperado = ' + mtex(r"A\sum S(m)\geq P") + ' '
             '(A = parcela Price; hipótese conservadora de zero recuperação após o desligamento). '
             'Taxa praticada = este piso + custo de captação + custo operacional + margem.</div>'
             '</div></div>')
@@ -320,7 +348,7 @@ def npv_table_slide():
             + variantes +
             '<div class="apt-note"><b>Por causa do ROI fixo, no baixo risco a taxa CAI com o prazo</b> '
             '(a margem-alvo se dilui em mais meses de pagamento quase certo; no alto risco isso some). '
-            'Pricing-alvo: i tal que NPV = ROI·P (lucro a valor presente). Premissas: captação 1,2%/mês; '
+            'Pricing-alvo: i tal que ' + mtex(r"\mathrm{NPV}=\mathrm{ROI}\cdot P") + ' (lucro a valor presente). Premissas: captação 1,2%/mês; '
             'zero recuperação após o desligamento; falta somar custo operacional e perdas residuais.</div>'
             '</div></div>')
 
@@ -328,9 +356,9 @@ def consig_tables_slide():
     return ('<div class="slide cust"><div class="hb"><span class="kick">REFERÊNCIA PARA A POLÍTICA DE CONCESSÃO</span>'
             '<span class="ttl">Prazo máximo e cobertura de parcelas por categoria (14 faixas, ref. 2021–2024)</span></div>'
             '<div class="aptwrap-l"><div class="apt-h">Prazo máx. (meses) por confiança de seguir empregado</div>' + TERMO_TBL +
-            '<div class="apt-note">t = λ·(−ln c)^(1/p) · inteiros · cap "120+"</div></div>'
+            '<div class="apt-note">' + mtex(r"t=\lambda(-\ln c)^{1/p}") + ' · inteiros · cap "120+"</div></div>'
             '<div class="aptwrap-r"><div class="apt-h">Cobertura esperada de parcelas (% pagas em folha) por prazo T</div>' + COV_TBL +
-            '<div class="apt-note">Σ S(m)/T · S = KM MOB (≤12) + Weibull (&gt;12) · ref. 2021–2024 · &gt;12m é projeção</div></div></div>')
+            '<div class="apt-note">' + mtex(r"\sum S(m)/T") + ' · S = KM MOB (≤12) + Weibull (&gt;12) · ref. 2021–2024 · &gt;12m é projeção</div></div></div>')
 
 # ---------- 4. monta os slides ----------
 PREPARO = 2          # slide leak-free do PDF -> no HTML vira feature importance interativo
