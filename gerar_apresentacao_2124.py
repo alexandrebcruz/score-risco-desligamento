@@ -687,17 +687,17 @@ def consignado_conceitos():
     secao(fig, LX, 0.785, "Ponto de partida — a curva de sobrevivência S(t)")
     prosa(fig, LX, 0.737, "S(t) = probabilidade de o vínculo seguir ativo t meses após a entrada.", fs=12.4)
     prosa(fig, LX, 0.702, "≤12 meses: medido nos dados (Kaplan-Meier);  >12: extrapolado por Weibull:", fs=12.0, color=GREY)
-    formula_card(fig, LX, 0.590, 0.55, 0.095, r"S(t)=\exp\!\left(-(t/\lambda)^{p}\right)", fs=20,
+    formula_card(fig, LX, 0.590, 0.52, 0.095, r"S(t)=\exp\!\left(-(t/\lambda)^{p}\right)", fs=20,
                  label="λ = escala · p = forma (ajustados por categoria)")
 
     secao(fig, LX, 0.520, "Prazo máximo por confiança c  (tabela da esquerda)")
     prosa(fig, LX, 0.477, "maior prazo t com confiança c de o tomador seguir empregado:", fs=12.0, color=GREY)
-    formula_card(fig, LX, 0.365, 0.55, 0.095, r"t=\lambda\,(-\ln c)^{1/p}", fs=20,
+    formula_card(fig, LX, 0.365, 0.52, 0.095, r"t=\lambda\,(-\ln c)^{1/p}", fs=20,
                  label="Ex.: c = 90% → prazo onde S cai a 0,90")
 
     secao(fig, LX, 0.295, "Cobertura esperada de parcelas T  (tabela da direita)")
     prosa(fig, LX, 0.252, "fração média das T parcelas pagas em folha (enquanto há vínculo):", fs=12.0, color=GREY)
-    formula_card(fig, LX, 0.135, 0.55, 0.100,
+    formula_card(fig, LX, 0.135, 0.52, 0.100,
                  r"\mathrm{cob}(T)=\frac{S(1)+S(2)+\cdots+S(T)}{T}", fs=19)
 
     ax = fig.add_axes([0.63, 0.13, 0.33, 0.60]); ax.set_xlim(0, 36); ax.set_ylim(0, 1.02)
@@ -772,16 +772,16 @@ def taxa_conceitos():
     prosa(fig, LX, 0.700, "parcelas deixa de ser paga quando o tomador é desligado?", fs=12.4)
 
     secao(fig, LX, 0.635, "Parcela fixa (Tabela Price)")
-    formula_card(fig, LX, 0.520, 0.55, 0.095, r"A=\frac{P\,i}{1-(1+i)^{-T}}", fs=20,
+    formula_card(fig, LX, 0.520, 0.52, 0.095, r"A=\frac{P\,i}{1-(1+i)^{-T}}", fs=20,
                  label="P = principal · i = juros · T = prazo")
 
     secao(fig, LX, 0.455, "Recebido esperado")
     prosa(fig, LX, 0.412, "só se paga a parcela do mês m se o vínculo seguir ativo (prob. S(m)):", fs=12.0, color=GREY)
-    formula_card(fig, LX, 0.300, 0.55, 0.095,
+    formula_card(fig, LX, 0.300, 0.52, 0.095,
                  r"\mathrm{recebido}=A\!\sum_{m=1}^{T}\! S(m)=A\,T\,\mathrm{cob}(T)", fs=19)
 
     secao(fig, LX, 0.235, "Break-even — recuperar o principal")
-    formula_card(fig, LX, 0.120, 0.55, 0.095,
+    formula_card(fig, LX, 0.120, 0.52, 0.095,
                  r"\frac{i\,T\,\mathrm{cob}(T)}{1-(1+i)^{-T}}\;\geq\;1", fs=20,
                  face="#eaf6ee", edge="#bfe2cb")
     # ---- diagrama: recebido esperado ÷ principal, à MESMA taxa (1%/mês, T=24) ----
@@ -874,13 +874,13 @@ def npv_conceitos():
     secao(fig, LX, 0.638, "Valor Presente Líquido (NPV)")
     prosa(fig, LX, 0.593, r"traz cada parcela esperada a valor de hoje, ao custo de captação $r_f$:",
           fs=12.0, color=GREY)
-    formula_card(fig, LX, 0.470, 0.56, 0.105,
+    formula_card(fig, LX, 0.470, 0.52, 0.105,
                  r"\mathrm{NPV}=-P+\sum_{m=1}^{T}\frac{A\,S(m)}{(1+r_f)^{m}}", fs=18)
 
     secao(fig, LX, 0.398, "Taxa de pricing — retorno-alvo ROI")
     prosa(fig, LX, 0.355, "escolhe-se i tal que NPV = ROI·P (lucro a valor presente = ROI do principal):",
           fs=12.0, color=GREY)
-    formula_card(fig, LX, 0.230, 0.56, 0.120,
+    formula_card(fig, LX, 0.230, 0.52, 0.120,
                  r"\frac{i}{1-(1+i)^{-T}}=\frac{1+\mathrm{ROI}}{D}\,,\quad D=\sum_{m=1}^{T}\frac{S(m)}{(1+r_f)^{m}}",
                  fs=17, face="#eaf6ee", edge="#bfe2cb")
     prosa(fig, LX, 0.178, r"$D$ = nº esperado de parcelas pagas, a valor presente (cobertura descontada).",
