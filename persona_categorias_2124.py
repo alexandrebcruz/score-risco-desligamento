@@ -59,6 +59,12 @@ def map_esc(v):
             "7": "medio_completo", "8": "superior_incompleto", "9": "superior",
             "10": "superior", "11": "superior"}.get(_s(v), "nao_informado")
 
+# anos de estudo típicos por código RAIS de grau de instrução (1..11); 99/outros = NaN
+# (analfabeto=0; até 5ª inc.=2,5; 5ª compl.=5; 6ª-9ª=7,5; fund.=9; médio inc.=10,5;
+#  médio=12; sup. inc.=14; superior=16; mestrado=18; doutorado=22)
+ANOS_ESTUDO = {"1": 0.0, "2": 2.5, "3": 5.0, "4": 7.5, "5": 9.0, "6": 10.5,
+               "7": 12.0, "8": 14.0, "9": 16.0, "10": 18.0, "11": 22.0}
+
 def map_setor(v):
     return {"1": "publico", "2": "privado", "3": "sem_fins"}.get(str(v), "outro_setor")
 
@@ -79,6 +85,7 @@ NUMS = ["y", "prob_desligamento", "idade", "tempo_vinculo_meses", "qtd_dias_afas
 
 def novo_acc():
     return {"num": defaultdict(lambda: np.zeros(len(NUMS) + 1)),       # cat -> [n, sums...]
+            "anos": defaultdict(lambda: np.zeros(2)),                  # cat -> [n_validos, soma anos_estudo]
             "buck": {b: defaultdict(int) for b in BUCKETS},            # (cat,bucket) -> n
             "dist": {f: defaultdict(int) for f in DISTINTIVOS}}        # (cat,valor) -> n
 
@@ -90,6 +97,7 @@ for a in ANOS_REF:
         d = pq.ParquetFile(fp).read(columns=COLS).to_pandas()
         d["cbo1"] = d["cbo"].astype(str).str[:1]
         d["cnae2"] = d["cnae"].astype(str).str[:2]
+        d["__anos_estudo"] = d["escolaridade"].map(lambda v: ANOS_ESTUDO.get(_s(v), np.nan))
         # buckets mapeados 1x (compartilhados entre os 2 modos)
         for b, (c, fn) in BUCKETS.items():
             d[f"__{b}"] = d[c].map(fn)
@@ -100,6 +108,9 @@ for a in ANOS_REF:
             g = dd.groupby(KCOL)[NUMS].sum(); gn = dd.groupby(KCOL).size()
             for cat, row in g.iterrows():
                 acc["num"][int(cat)] += np.concatenate([[gn[cat]], row.values])
+            ga = dd.groupby(KCOL)["__anos_estudo"].agg(["count", "sum"])
+            for cat, row in ga.iterrows():
+                acc["anos"][int(cat)] += np.array([row["count"], row["sum"]])
             for b in BUCKETS:
                 vc = dd.groupby([KCOL, f"__{b}"]).size()
                 for (cat, val), n in vc.items():
@@ -158,6 +169,9 @@ for suf, acc in ACC.items():
     prof["idade_media"] = base["idade_mean"].round(1)
     prof["tempo_anos"] = base["tempo_anos"].round(2)
     prof["dias_afast_mes"] = base["qtd_dias_afastamento_mean"].round(2)
+    # média de anos de estudo (só códigos válidos 1..11; 99=ignorado fica fora)
+    A = np.array([acc["anos"][c] for c in cats])
+    prof["anos_estudo"] = np.where(A[:, 0] > 0, A[:, 1] / np.maximum(A[:, 0], 1), np.nan).round(1)
     for k, df_, c in [("clt_indet%", tv, "clt_indet"), ("temp_det%", tv, "temp_determinado"),
                       ("estatut%", tv, "estatutario"), ("verde_amarelo%", tv, "verde_amarelo"),
                       ("rem_baixa%", rem, "rem_baixa<=1SM"), ("rem_alta%", rem, "rem_alta>5SM"),

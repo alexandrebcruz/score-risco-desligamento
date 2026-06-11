@@ -487,7 +487,10 @@ def grupo_slide(nome, cats, cor, n, pers=None, persona_txt=None, inds_spec=None,
         ax.text(xend + 0.025, y, ltxt, fontsize=11.5, weight="bold", color=lc, va="center")
     ax2 = fig.add_axes([0.54, 0.10, 0.43, 0.34]); ax2.axis("off"); ax2.set_xlim(0,1); ax2.set_ylim(0,1)
     cards = [("Risco médio do grupo", f"{taxa:.1f}%"), ("Idade média", f"{wavg('idade_media'):.0f} anos"),
-             ("Tempo de casa (entrada)", f"{wavg('tempo_anos'):.1f} anos"), ("Ensino fundamental", f"{wavg('ate_fund%'):.0f}%")]
+             ("Tempo de casa (entrada)", f"{wavg('tempo_anos'):.1f} anos"),
+             # anos de estudo médios (código RAIS → anos): captura o gradiente de
+             # escolaridade entre grupos melhor que o % de fundamental incompleto
+             ("Anos de estudo (média)", f"{wavg('anos_estudo'):.1f}")]
     for i, (k, v) in enumerate(cards):
         x = 0.0 + (i % 2) * 0.52; y = 0.55 - (i // 2) * 0.5
         ax2.add_patch(FancyBboxPatch((x, y), 0.46, 0.40, boxstyle="round,pad=0.015", facecolor=LIGHT, linewidth=0))
