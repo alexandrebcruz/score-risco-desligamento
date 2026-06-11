@@ -2,8 +2,9 @@
 Presidência — modelo NOVO (retreino 2021–2024, leak-free, 14 categorias, MOB ref.
 2021–2024). NÃO substitui gerar_apresentacao_consignado_diretoria.py (modelo antigo).
 
-6 slides: Capa → Racional → Base analítica → Curva de sobrevivência interativa →
-Do tempo ao prazo → TABELA DE REFERÊNCIA da política (último slide).
+8 slides: Capa → Racional → Base analítica → Curva de sobrevivência interativa →
+Do tempo ao prazo → TABELA DE REFERÊNCIA da política → Do risco à taxa (pricing
+NPV, ROI 10%) → Síntese/proposta (números computados dos CSVs, nada hardcoded).
 
 Uso:  MPLCONFIGDIR=/tmp/mpl /tmp/consig_venv/bin/python gerar_apresentacao_diretoria_2124.py
 Saída: outputs/apresentacao_consignado_diretoria_2124.html
@@ -28,6 +29,7 @@ MET = pd.read_csv("outputs/runpod_retreino_2124/metricas_por_ano.csv")
 ME = MET[MET.modelo == "ensemble"].set_index("ano")
 AUC25, KS25 = ME.loc[2025, "AUC"], ME.loc[2025, "KS"]
 def pct(v, nd=1): return f"{v*100:.{nd}f}%".replace(".", ",")
+def _br(v, nd=1): return f"{v:.{nd}f}".replace(".", ",")
 
 # ======================= ESTILO =======================
 W, H = 13.33, 7.5
@@ -82,7 +84,7 @@ def capa():
         ax.text(x + 0.10, 0.425, k, color="#9fc0e8", fontsize=11.5, ha="center", weight="bold")
         ax.text(x + 0.10, 0.365, v, color="white", fontsize=22, ha="center", weight="bold")
         ax.text(x + 0.10, 0.305, s, color="#9fc0e8", fontsize=9, ha="center")
-    ax.text(0.06, 0.12, "Material para Diretoria e Presidência  ·  objetivo: tabela de referência para a concessão (último slide)",
+    ax.text(0.06, 0.12, "Material para Diretoria e Presidência  ·  objetivo: tabelas de referência para a concessão — prazo, cobertura e taxa (slides finais)",
             color="#c9d6e8", fontsize=12.5)
     pages.append(fig)
 capa()
@@ -191,9 +193,16 @@ def _face(fname, weight):
 FONTS = _face("DejaVuSans.ttf", "400") + _face("DejaVuSans-Bold.ttf", "700")
 
 def bullets_html(items):
+    # b=True → bullet ▸ · b=None → continuação da linha anterior (indentada, sem ▸) ·
+    # b=False → cabeçalho de seção (mesma semântica do bullet() dos slides estáticos)
     out = []
     for b, t in items:
-        out.append((f'<div class="b"><span class="bi">▸</span>{t}</div>') if b else f'<div class="bh">{t}</div>')
+        if b is True:
+            out.append(f'<div class="b"><span class="bi">▸</span>{t}</div>')
+        elif b is None:
+            out.append(f'<div class="b bn">{t}</div>')
+        else:
+            out.append(f'<div class="bh">{t}</div>')
     return "\n".join(out)
 
 SURV_TXT = bullets_html([
@@ -205,7 +214,7 @@ SURV_TXT = bullets_html([
     (True, "Cai rápido (faixas altas) = alta rotatividade → exige prazos curtos."),
     (False, "Base"),
     (True, "Kaplan-Meier sobre 4 safras da RAIS (2021–2024); ≤12m observado (sólido),"),
-    (True, ">12m extrapolado por Weibull (tracejado)."),
+    (None, ">12m extrapolado por Weibull (tracejado)."),
 ])
 def interactive_slide(kicker, title, txt, chart_id):
     return f'''<div class="slide cust">
@@ -228,7 +237,9 @@ def _termo_tbl():
     for _, r in PRAZO.iterrows():
         k = int(r.categoria); cells = ""
         for c in ("conf_95", "conf_90", "conf_85", "conf_80"):
-            v = float(r[c]); disp = "120+" if v > 120 else f"{v:.0f}"
+            # truncado p/ baixo (floor): prazo MÁXIMO com confiança ≥ c — nunca
+            # arredondar (round superestimaria o prazo seguro). Convenção dos decks 2124.
+            v = float(r[c]); disp = "120+" if v > 120 else ("<1" if v < 1 else f"{int(v)}")
             cells += '<td style="background:%s">%s</td>' % (_heat(min(v, 36) / 36), disp)
         body += "<tr>" + _catcell(k) + cells + "</tr>"
     return '<table class="aptbl"><thead>%s</thead><tbody>%s</tbody></table>' % (h, body)
@@ -248,12 +259,14 @@ _INTRO_A = bullets_html([
     (True, "S(t) = probabilidade de o desconto em folha seguir ativo no mês t."),
     (True, "Prazo por confiança: maior prazo t em que S(t) ≥ c (ex.: 90% de seguir empregado)."),
     (True, "Cobertura: Σ S(m) = parcelas esperadas pagas em folha; exija ≥ um piso de cobertura."),
-    (True, "Faixa de risco vira tier: baixas → prazos longos; altas → curtos ou rejeição."),
+    (True, "Taxa: a mesma S(t) precifica o juro por faixa — piso de quebra-zero e taxa de"),
+    (None, "pricing com retorno-alvo (slide 7)."),
 ])
 _INTRO_B = bullets_html([
     (False, "Como usar na política"),
-    (True, "Definir, por tier, o prazo máximo (coluna de confiança) e o piso de cobertura aceitável."),
-    (True, "Combinar com taxa, LGD e mitigantes (rescisão/FGTS, portabilidade, conversão)."),
+    (True, "Faixa de risco vira tier: prazo máximo (coluna de confiança), piso de cobertura"),
+    (None, "e taxa calculada por faixa — baixas → prazos longos; altas → curtos ou rejeição."),
+    (True, "Refinar a taxa calculada com LGD e mitigantes (rescisão/FGTS, portabilidade)."),
     (False, "Ressalvas (governança / LGPD)"),
     (True, ">12 meses é projeção (Weibull) — recalibrar com cada nova RAIS anual."),
     (True, "Análise agregada; decisão individual exige revisão humana e cuidado com viés."),
@@ -306,6 +319,69 @@ def consig_tables_slide():
             '<div class="aptwrap-r"><div class="apt-h">Cobertura esperada de parcelas (% pagas em folha) por prazo T</div>' + COV_TBL +
             '<div class="apt-note">T em meses (MOB) · &gt;12 extrapolado (Weibull) · referência 2021–2024 · verde = melhor</div></div></div>')
 
+# ---------- slide DO RISCO À TAXA (pricing NPV) ----------
+TAXA_BK = pd.read_csv("outputs/tables/consignado_taxa_breakeven_2124.csv")
+TAXA_NPV = pd.read_csv("outputs/tables/consignado_taxa_npv_2124.csv")
+_TS_TAX = [6, 12, 18, 24, 36, 48, 60]
+# valores citados nos bullets/síntese — sempre COMPUTADOS dos CSVs (convenção 2124)
+_bk1, _bk14 = (float(TAXA_BK.loc[TAXA_BK.categoria == c, "m_T24"].iloc[0]) for c in (1, 14))
+_np1, _np14 = (float(TAXA_NPV.loc[TAXA_NPV.categoria == c, "m10_T24"].iloc[0]) for c in (1, 14))
+
+def _tax_tbl():
+    vmax = max(float(TAXA_NPV[f"m10_T{t}"].max()) for t in _TS_TAX)
+    h = "<tr><th>cat</th>" + "".join(f"<th>T={t}</th>" for t in _TS_TAX) + "</tr>"
+    body = ""
+    for _, r in TAXA_NPV.iterrows():
+        k = int(r.categoria)
+        cells = "".join('<td style="background:%s">%s</td>'
+                        % (_heat(1 - float(r[f"m10_T{t}"]) / vmax), _br(float(r[f"m10_T{t}"]), 2))
+                        for t in _TS_TAX)
+        body += "<tr>" + _catcell(k) + cells + "</tr>"
+    return '<table class="aptbl"><thead>%s</thead><tbody>%s</tbody></table>' % (h, body)
+
+_TAXA_TXT = bullets_html([
+    (False, "Como o risco vira taxa"),
+    (True, "Taxa de pricing (NPV): o juro que entrega o retorno-alvo já descontando os"),
+    (None, "desligamentos esperados de cada faixa e o custo de captação."),
+    (True, f"Piso (quebra-zero, T=24): de {_br(_bk1, 2)}%/mês (faixa 1) a {_br(_bk14)}%/mês (faixa 14)."),
+    (False, "Como ler a tabela"),
+    (True, "A taxa cresce com a faixa de risco — o crédito continua viável nas faixas altas,"),
+    (None, "desde que precificado (ou mitigado por prazo curto)."),
+    (True, "Nas faixas baixas a taxa CAI com o prazo: parcelas longas seguem seguras."),
+    (False, "Premissas (conservadoras)"),
+    (True, "Captação 1,2%/mês · retorno-alvo (ROI) 10% a valor presente."),
+    (True, "ZERO recuperação após o desligamento — com mitigantes (rescisão/FGTS,"),
+    (None, "portabilidade), a taxa necessária é MENOR que a mostrada."),
+])
+def taxa_slide():
+    return ('<div class="slide cust"><div class="hb"><span class="kick">APLICAÇÃO · PRICING POR FAIXA</span>'
+            '<span class="ttl">Do risco à taxa: juros de pricing por faixa de risco</span></div>'
+            '<div class="txt">' + _TAXA_TXT + '</div>'
+            '<div class="aptwrap-tx"><div class="apt-h">Taxa de pricing (NPV, ROI 10%) — % ao mês, por prazo T</div>' + _tax_tbl() +
+            '<div class="apt-note">T em meses · referência 2021–2024 · verde = taxa menor · premissa: 0% de recuperação pós-desligamento</div></div></div>')
+
+# ---------- slide de SÍNTESE / PROPOSTA (fecho executivo) ----------
+def _pz(c, col="conf_90"):
+    v = float(PRAZO.loc[PRAZO.categoria == c, col].iloc[0])
+    return "120+" if v > 120 else ("<1" if v < 1 else f"{int(v)}")
+def sintese_slide():
+    pts = [
+        f"Modelo validado em 10 safras da RAIS (743 mi de vínculos); no futuro puro (2025): AUC {pct(AUC25)} e KS {pct(KS25)}.",
+        "14 faixas de risco ordenadas em todos os anos → política objetiva de prazo, cobertura e taxa.",
+        f"Prazo máximo (90% de confiança de seguir empregado): de {_pz(14)} mês(es) na faixa 14 a {_pz(1)} meses na faixa 1.",
+        f"Taxa mínima (quebra-zero, T=24): de {_br(_bk1, 2)}%/mês (faixa 1) a {_br(_bk14)}%/mês (faixa 14).",
+        f"Pricing com ROI 10% (T=24): de {_br(_np1)}%/mês a {_br(_np14)}%/mês — com premissa de ZERO recuperação pós-desligamento.",
+        "Proposta: adotar a tabela de referência na concessão (prazo por faixa + piso de cobertura + taxa por faixa).",
+        "Governança: recalibrar a cada nova RAIS anual; &gt;12 meses é projeção (Weibull).",
+    ]
+    lis = "".join(f'<div class="fb">• {t}</div>' for t in pts)
+    return ('<div class="slide fin"><div class="finbody">'
+            '<div class="finttl">Síntese e proposta</div><div class="finbar"></div>'
+            + lis +
+            '<div class="finlgpd">⚠ Uso ético/LGPD: análise agregada e descritiva; decisões sobre indivíduos '
+            'exigem revisão humana e cuidado com vieses (setor, escolaridade, região).</div>'
+            '</div></div>')
+
 # ======================= MONTAGEM =======================
 slides = []
 for i in range(NSTATIC):
@@ -314,6 +390,8 @@ slides.append(interactive_slide("PERMANÊNCIA NO EMPREGO",
               "Probabilidade de seguir empregado, por faixa de risco (ref. 2021–2024)", SURV_TXT, "km"))
 slides.append(consig_intro_slide())
 slides.append(consig_tables_slide())
+slides.append(taxa_slide())
+slides.append(sintese_slide())
 SLIDES = "\n".join(slides)
 NTOTAL = len(slides)
 
@@ -340,6 +418,7 @@ HTML = r"""<!DOCTYPE html>
   .txt{position:absolute;left:3.5%;top:19%;width:38%;}
   .bh{font-weight:bold;color:var(--ink);font-size:calc(var(--u)*1.31);margin:calc(var(--u)*0.95) 0 calc(var(--u)*0.2);}
   .b{color:var(--ink);font-size:calc(var(--u)*1.31);margin:calc(var(--u)*0.28) 0;padding-left:1.5em;text-indent:-1.5em;line-height:1.3;}
+  .b.bn{text-indent:0;margin-top:calc(var(--u)*-0.14);}
   .bi{color:#f4a722;font-weight:bold;margin-right:.5em;}
   .chartwrap{position:absolute;left:43%;top:16%;width:55%;height:80%;display:flex;flex-direction:column;}
   .ctrls{flex:0 0 auto;margin-bottom:.4vh;}
@@ -364,6 +443,13 @@ HTML = r"""<!DOCTYPE html>
   .aptbl th{background:var(--navy);color:#fff;padding:2px 4px;position:sticky;top:0;font-weight:600;}
   .aptbl td{padding:2px 5px;text-align:center;border:1px solid #fff;}
   .aptbl td.ct{font-weight:700;}
+  .aptwrap-tx{position:absolute;left:43%;top:15.5%;width:55%;height:82%;overflow:auto;display:flex;flex-direction:column;justify-content:center;}
+  .fin{background:var(--navy);}
+  .finbody{position:absolute;left:6%;right:6%;top:12%;bottom:6%;display:flex;flex-direction:column;justify-content:center;}
+  .finttl{color:#fff;font-size:calc(var(--u)*3.0);font-weight:bold;margin-bottom:calc(var(--u)*0.6);}
+  .finbar{width:18%;height:calc(var(--u)*0.16);background:#f4a722;margin-bottom:calc(var(--u)*1.6);}
+  .fb{color:#dbe6f3;font-size:calc(var(--u)*1.32);margin:calc(var(--u)*0.55) 0;line-height:1.35;}
+  .finlgpd{color:#9fc0e8;font-size:calc(var(--u)*1.05);margin-top:calc(var(--u)*2.0);}
   .grid{stroke:#e6e6e6;stroke-width:1;} .ax{stroke:#999;stroke-width:1;} .tk{fill:#666;font-size:11px;} .al{fill:#1b2430;font-size:12px;}
   .cv{fill:none;stroke-width:1.7;} .ext{fill:none;stroke-width:1.4;stroke-dasharray:5 4;} .dt{stroke:#fff;stroke-width:.5;}
   .bound{stroke:#999;stroke-width:1;stroke-dasharray:2 3;} .guide{stroke:#888;stroke-dasharray:4 3;stroke-width:1;visibility:hidden;}
