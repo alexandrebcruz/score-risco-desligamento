@@ -553,18 +553,19 @@ divisor("Apêndice B — Quando ocorre o desligamento",
 def surv_curva():
     fig = new_slide(); header(fig, "TEMPO ATÉ O DESLIGAMENTO · SOBREVIVÊNCIA",
                               "Curvas de sobrevivência por categoria (Kaplan-Meier, MOB)")
-    bullet(fig, 0.05, 0.76, [
-        (False, "A ideia"),
-        (True, "O modelo prevê QUEM/SE é desligado; a sobrevivência mede QUANDO."),
-        (True, "S(t) = prob. de seguir empregado t meses após a ENTRADA (relógio MOB)."),
-        (False, "Dos microdados (RAIS 2021–2024 agrupados)"),
-        (True, "Evento = dispensa s/ justa causa; censura = ativo ou outra saída."),
-        (True, "Pré-existente entra em janeiro; admitido no ano, no mês de admissão."),
-        (False, "Kaplan–Meier"),
-        (True, r"$S(t)=\prod_m (n_m-d_m)/n_m$ — usa a censura sem viés, mês a mês."),
-        (True, "4 safras agregadas → sazonalidade de calendário diluída."),
-    ], fs=12.4, dy=0.063)
-    ax = fig.add_axes([0.50, 0.10, 0.48, 0.70])
+    LX = 0.05
+    secao(fig, LX, 0.770, "A ideia")
+    prosa(fig, LX, 0.726, "O modelo prevê QUEM/SE é desligado; a sobrevivência mede QUANDO.", fs=12.2)
+    prosa(fig, LX, 0.691, "S(t) = prob. de seguir empregado t meses após a entrada (MOB).", fs=12.2)
+    secao(fig, LX, 0.628, "Dos microdados (RAIS 2021–2024)")
+    prosa(fig, LX, 0.585, "evento = dispensa s/ justa causa; censura = ativo ou outra saída;", fs=11.8, color=GREY)
+    prosa(fig, LX, 0.552, "pré-existente entra em janeiro; admitido no ano, no mês de admissão.", fs=11.8, color=GREY)
+    secao(fig, LX, 0.485, "Estimador de Kaplan–Meier")
+    formula_card(fig, LX, 0.350, 0.43, 0.105, r"S(t)=\prod_{m}\frac{n_m-d_m}{n_m}", fs=21,
+                 label="nₘ = em risco · dₘ = desligados no mês m")
+    prosa(fig, LX, 0.285, "Usa a censura sem viés, mês a mês; 4 safras agregadas diluem a", fs=11.8, color=GREY)
+    prosa(fig, LX, 0.252, "sazonalidade de calendário.", fs=11.8, color=GREY)
+    ax = fig.add_axes([0.52, 0.10, 0.46, 0.70])
     ax.imshow(plt.imread("outputs/figures/sobrevivencia_categorias_mob_2124.png")); ax.axis("off")
     footer(fig, "B1"); pages.append(fig)
 surv_curva()
@@ -573,18 +574,18 @@ IDX["B1"] = len(pages) - 1
 def surv_weibull():
     fig = new_slide(); header(fig, "TEMPO ATÉ O DESLIGAMENTO · EXTRAPOLAÇÃO",
                               "Estendendo as curvas além de 12 meses (Weibull)")
-    bullet(fig, 0.05, 0.76, [
-        (False, "O problema"),
-        (True, "12 meses de dado não enxergam além de 12m (a curva ainda está alta)."),
-        (False, "Solução: forma paramétrica de Weibull"),
-        (True, r"$S(t)=\exp(-(t/\lambda)^{p})$;  hazard $\propto t^{\,p-1}$."),
-        (True, r"Ajuste por regressão pura: $\ln(-\ln S)=p\,\ln t+\ln\alpha$ (OLS, 12 pts)."),
-        (True, "R² médio ≈ 0,994 — extrapola até 36 MOB (tracejado)."),
-        (False, "Qualidade do ajuste"),
-        (True, "Q1/mediana/média/Q3 decrescem monotonicamente com a categoria"),
-        (None, "(0 inversões) — a isotônica de salvaguarda não precisou atuar."),
-    ], fs=12.4, dy=0.063)
-    ax = fig.add_axes([0.50, 0.10, 0.48, 0.70])
+    LX = 0.05
+    secao(fig, LX, 0.770, "O problema")
+    prosa(fig, LX, 0.726, "12 meses de dado não enxergam além de 12m (a curva ainda está alta).", fs=12.0)
+    secao(fig, LX, 0.662, "Solução: forma paramétrica de Weibull")
+    formula_card(fig, LX, 0.540, 0.43, 0.098, r"S(t)=\exp\!\left(-(t/\lambda)^{p}\right)", fs=20,
+                 label="hazard ∝ t^(p−1)  ·  λ = escala, p = forma")
+    secao(fig, LX, 0.470, "Ajuste por regressão (cloglog)")
+    prosa(fig, LX, 0.427, "lineariza e ajusta por OLS nos 12 pontos observados:", fs=11.8, color=GREY)
+    formula_card(fig, LX, 0.305, 0.43, 0.098, r"\ln(-\ln S)=p\,\ln t+\ln\alpha", fs=20)
+    prosa(fig, LX, 0.240, "R² médio ≈ 0,994; extrapola até 36 MOB (tracejado).", fs=11.8, color=GREY)
+    prosa(fig, LX, 0.205, "Q1/mediana/média/Q3 já saem monotônicas (0 inversões).", fs=11.8, color=GREY)
+    ax = fig.add_axes([0.52, 0.10, 0.46, 0.70])
     ax.imshow(plt.imread("outputs/figures/sobrevivencia_weibull_extrap_mob_2124.png")); ax.axis("off")
     footer(fig, "B2"); pages.append(fig)
 surv_weibull()
@@ -824,10 +825,12 @@ def npv_conceitos():
     secao(fig, LX, 0.398, "Taxa de pricing — retorno-alvo ROI")
     prosa(fig, LX, 0.355, "escolhe-se i tal que NPV = ROI·P (lucro a valor presente = ROI do principal):",
           fs=12.0, color=GREY)
-    formula_card(fig, LX, 0.215, 0.56, 0.120,
+    formula_card(fig, LX, 0.230, 0.56, 0.120,
                  r"\frac{i}{1-(1+i)^{-T}}=\frac{1+\mathrm{ROI}}{D}\,,\quad D=\sum_{m=1}^{T}\frac{S(m)}{(1+r_f)^{m}}",
                  fs=17, face="#eaf6ee", edge="#bfe2cb")
-    prosa(fig, LX, 0.150, r"Break-even é o caso particular  $r_f=0$  e  ROI $=0$.", fs=11.5, color=GREY)
+    prosa(fig, LX, 0.178, r"$D$ = nº esperado de parcelas pagas, a valor presente (cobertura descontada).",
+          fs=11.0, color=GREY)
+    prosa(fig, LX, 0.142, r"Break-even é o caso particular  $r_f=0$  e  ROI $=0$.", fs=11.0, color=GREY)
     # diagrama: taxa sobe do piso -> ROI 10% -> ROI 20% (ex.: cat 4 e cat 8, T=24)
     import numpy as _np
     ax = fig.add_axes([0.64, 0.155, 0.325, 0.545])

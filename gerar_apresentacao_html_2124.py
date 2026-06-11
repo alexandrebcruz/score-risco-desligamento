@@ -199,27 +199,32 @@ def bullets_html(items):
         out.append((f'<div class="b"><span class="bi">▸</span>{t}</div>') if b else f'<div class="bh">{t}</div>')
     return "\n".join(out)
 
-B1_TXT = bullets_html([
+def fblock(tex, label=None, fs=30):
+    """Fórmula em DESTAQUE (display): caixa clara, centralizada, grande."""
+    lab = f'<div class="fbl-l">{label}</div>' if label else ""
+    return '<div class="fblock">%s%s</div>' % (lab, mtex(tex, color="#14233f", fs=fs))
+
+B1_TXT = (bullets_html([
     (False, "A ideia"),
     (True, "O modelo prevê QUEM/SE é desligado; a sobrevivência mede QUANDO."),
-    (True, "S(t) = prob. de seguir empregado t meses após a ENTRADA (relógio MOB)."),
-    (False, "Dos microdados (RAIS 2021–2024 agrupados)"),
+    (True, "S(t) = prob. de seguir empregado t meses após a entrada (MOB)."),
+    (False, "Dos microdados (RAIS 2021–2024)"),
     (True, "Evento = dispensa s/ justa causa; censura = ativo ou saída por outro motivo."),
-    (True, "Pré-existente entra em janeiro; admitido no ano entra no mês de admissão."),
-    (False, "Kaplan–Meier"),
-    (True, mtex(r"S(t)=\prod_m (n_m-d_m)/n_m") + " — usa a censura sem viés, mês a mês."),
-    (True, "4 safras agregadas → sazonalidade de calendário diluída."),
-])
-B2_TXT = bullets_html([
+    (True, "Pré-existente entra em janeiro; admitido no ano, no mês de admissão."),
+    (False, "Estimador de Kaplan–Meier"),
+]) + fblock(r"S(t)=\prod_{m}\frac{n_m-d_m}{n_m}", "nₘ = em risco · dₘ = desligados no mês m") +
+    bullets_html([(True, "Usa a censura sem viés, mês a mês; 4 safras diluem a sazonalidade.")]))
+
+B2_TXT = (bullets_html([
     (False, "O problema"),
     (True, "12 meses de dado não enxergam além de 12m (a curva ainda está alta)."),
     (False, "Solução: forma paramétrica de Weibull"),
-    (True, mtex(r"S(t)=\exp(-(t/\lambda)^{p})") + "; hazard " + mtex(r"\propto t^{\,p-1}") + "."),
-    (True, "Ajuste por regressão pura: " + mtex(r"\ln(-\ln S)=p\,\ln t+\ln\alpha") + " (OLS, 12 pts)."),
-    (True, "R² médio ≈ 0,994 — extrapola até 36 MOB (tracejado)."),
-    (False, "Qualidade do ajuste"),
-    (True, "Q1/mediana/média/Q3 monotônicos sem ajuste (0 inversões); projeção >12m é suposição."),
-])
+]) + fblock(r"S(t)=\exp\!\left(-(t/\lambda)^{p}\right)", "hazard ∝ t^(p−1) · λ = escala, p = forma") +
+    bullets_html([(False, "Ajuste por regressão (cloglog)"),
+                  (True, "lineariza e ajusta por OLS nos 12 pontos:")]) +
+    fblock(r"\ln(-\ln S)=p\,\ln t+\ln\alpha") +
+    bullets_html([(True, "R² médio ≈ 0,994; extrapola até 36 MOB (tracejado)."),
+                  (True, "Q1/mediana/média/Q3 já saem monotônicas (0 inversões).")]))
 
 def interactive_slide(kicker, title, txt, chart_id):
     return f'''<div class="slide cust">
@@ -308,7 +313,9 @@ def taxa_table_slide():
             '<span class="ttl">Taxa de equilíbrio (break-even) por categoria e prazo</span></div>'
             '<div class="taxwrap">'
             '<div class="taxhead"><div class="apt-h" id="tax-h">Taxa mínima para recuperar o principal — % ao mês</div>'
-            '<button class="taxbtn" id="tax-btn" onclick="toggleTaxa()">Ver % ao ano →</button></div>'
+            '<div style="display:flex;gap:.5em">'
+            '<button class="taxbtn" onclick="openRateCurve(\'bk\')">📈 Ver curvas</button>'
+            '<button class="taxbtn" id="tax-btn" onclick="toggleTaxa()">Ver % ao ano →</button></div></div>'
             '<div id="tax-m">' + TAXA_TBL_M + '</div>'
             '<div id="tax-a" style="display:none">' + TAXA_TBL_A + '</div>'
             '<div class="apt-note">Piso de quebra-zero: recebido nominal esperado = ' + mtex(r"A\sum S(m)\geq P") + ' '
@@ -333,6 +340,23 @@ def _npv_tbl(roi, modo):    # roi: "10"/"20" ; modo: "m"/"a"
     return '<table class="aptbl"><thead>%s</thead><tbody>%s</tbody></table>' % (h, body)
 NPV_TBL = {(roi, modo): _npv_tbl(roi, modo) for roi in ("10", "20") for modo in ("m", "a")}
 
+# ---------- dados p/ os modais de CURVA de juros × prazo (mesma info das tabelas) ----------
+def _rc_bk():
+    return [{"k": int(k), "cor": cor[int(k)], "txt": _contraste(cor[int(k)]),
+             "m": [round(float(TAXA.loc[k, f"m_T{t}"]), 3) for t in _TS_TX],
+             "a": [round(float(TAXA.loc[k, f"a_T{t}"]), 2) for t in _TS_TX]} for k in TAXA.index]
+def _rc_npv():
+    out = []
+    for k in TAXA_NPV.index:
+        d = {"k": int(k), "cor": cor[int(k)], "txt": _contraste(cor[int(k)])}
+        for roi in ("10", "20"):
+            d["m" + roi] = [round(float(TAXA_NPV.loc[k, f"m{roi}_T{t}"]), 3) for t in _TS_TX]
+            d["a" + roi] = [round(float(TAXA_NPV.loc[k, f"a{roi}_T{t}"]), 2) for t in _TS_TX]
+        out.append(d)
+    return out
+RATECURVE = {"prazos": _TS_TX, "bk": _rc_bk(), "npv": _rc_npv()}
+RATECURVE_JSON = json.dumps(RATECURVE, ensure_ascii=False)
+
 def npv_table_slide():
     variantes = "".join(
         '<div id="npv-%s%s"%s>%s</div>' % (roi, modo, ("" if (roi, modo) == ("10", "m") else ' style="display:none"'),
@@ -343,6 +367,7 @@ def npv_table_slide():
             '<div class="taxwrap">'
             '<div class="taxhead"><div class="apt-h" id="npv-h">Taxa de pricing — ROI 10% · % ao mês</div>'
             '<div style="display:flex;gap:.5em">'
+            '<button class="taxbtn" onclick="openRateCurve(\'npv\')">📈 Ver curvas</button>'
             '<button class="taxbtn" id="npv-roi" onclick="toggleNpvRoi()">Ver ROI 20% →</button>'
             '<button class="taxbtn" id="npv-per" onclick="toggleNpvPer()">Ver % ao ano →</button></div></div>'
             + variantes +
@@ -415,6 +440,11 @@ HTML = r"""<!DOCTYPE html>
   .bh{font-weight:bold;color:var(--ink);font-size:calc(var(--u)*1.31);margin:calc(var(--u)*0.95) 0 calc(var(--u)*0.2);}
   .b{color:var(--ink);font-size:calc(var(--u)*1.31);margin:calc(var(--u)*0.28) 0;padding-left:1.5em;text-indent:-1.5em;line-height:1.3;}
   .bi{color:#f4a722;font-weight:bold;margin-right:.5em;}
+  .fblock{background:#eef3f9;border:1px solid #cfe0f0;border-radius:8px;text-align:center;
+          padding:calc(var(--u)*0.75) calc(var(--u)*0.5);margin:calc(var(--u)*0.7) 0;
+          font-size:calc(var(--u)*1.45);}
+  .fblock .fbl-l{font-size:calc(var(--u)*0.92);color:var(--grey);margin-bottom:calc(var(--u)*0.35);}
+  .fblock .mtex{max-width:96%;}
   .chartwrap{position:absolute;left:43%;top:16%;width:55%;height:80%;display:flex;flex-direction:column;}
   .ctrls{flex:0 0 auto;margin-bottom:.4vh;}
   .grp{display:flex;flex-wrap:wrap;gap:calc(var(--u)*0.35);margin-bottom:calc(var(--u)*0.35);}
@@ -526,11 +556,21 @@ __SLIDES__
       <svg id="svg-rate" viewBox="0 0 920 460" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
   </div>
+  <div class="modal" id="ratecurvemodal" onclick="if(event.target===this)closeRateCurve()">
+    <div class="modalbox">
+      <button class="x" onclick="closeRateCurve()">×</button>
+      <h3 id="rc-title">Taxa de juros por prazo, por categoria</h3>
+      <div class="sub" id="rc-sub"></div>
+      <div class="ratectrls"><div class="grp" id="rc-grp"></div><div id="rc-tog" style="display:flex;gap:.5em"></div></div>
+      <div class="ratechips" id="rc-chips"></div>
+      <svg id="svg-rc" viewBox="0 0 920 460" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+  </div>
   <div class="nav"><button onclick="go(-1)" title="anterior (←)">‹</button><span id="counter"></span><button onclick="go(1)" title="próximo (→)">›</button></div>
 </div></div>
 <div id="tip"></div>
 <script>
-const DATA=__DATA__, GROUPS=__GROUPS__, RATE=__RATE__;
+const DATA=__DATA__, GROUPS=__GROUPS__, RATE=__RATE__, RATECURVE=__RATECURVE__;
 const IMP=__IMP__, FEATINFO=__FEATINFO__;
 const slides=[...document.querySelectorAll('.slide')]; let cur=0;
 const counter=document.getElementById('counter');
@@ -756,12 +796,79 @@ function _npvRender(){
 }
 function toggleNpvRoi(){ _npvRoi=_npvRoi==='10'?'20':'10'; _npvRender(); }
 function toggleNpvPer(){ _npvPer=_npvPer==='m'?'a':'m'; _npvRender(); }
+
+/* ---------- modal: CURVA de juros × prazo, por categoria ---------- */
+const _rcmodal=document.getElementById('ratecurvemodal');
+let _rcKind='bk', _rcPer='m', _rcRoi='10', _rcVis=new Set(), _rcInit=false;
+function closeRateCurve(){ _rcmodal.classList.remove('on'); }
+function openRateCurve(kind){
+  _rcKind=kind; _rcmodal.classList.add('on');
+  const series=RATECURVE[kind];
+  if(!_rcInit){ _rcVis=new Set(series.map(s=>s.k)); }
+  buildRcControls(); drawRC();
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape')closeRateCurve(); });
+function _rcField(){ return _rcKind==='bk' ? _rcPer : (_rcPer+_rcRoi); }
+function buildRcControls(){
+  const grp=document.getElementById('rc-grp'), tog=document.getElementById('rc-tog'), chips=document.getElementById('rc-chips');
+  grp.innerHTML=''; tog.innerHTML=''; chips.innerHTML='';
+  const series=RATECURVE[_rcKind];
+  series.forEach(s=>{ const b=document.createElement('button'); b.className='chip'; b.textContent=s.k; b.style.setProperty('--c',s.cor);
+    b.onclick=()=>{ if(_rcVis.has(s.k))_rcVis.delete(s.k); else _rcVis.add(s.k); _rcSync(); drawRC(); }; chips.appendChild(b); });
+  const gb=(lab,fn,col)=>{ const b=document.createElement('button'); b.textContent=lab; if(col){b.style.borderColor=col;b.style.color=col;} b.onclick=fn; grp.appendChild(b); };
+  gb('Todas',()=>{series.forEach(s=>_rcVis.add(s.k));_rcSync();drawRC();});
+  gb('Nenhuma',()=>{_rcVis.clear();_rcSync();drawRC();});
+  GROUPS.forEach(g=>gb(g.nome,()=>{_rcVis.clear();g.cats.forEach(k=>_rcVis.add(k));_rcSync();drawRC();},g.cor));
+  const tb=(id,lab,fn)=>{ const b=document.createElement('button'); b.className='taxbtn'; b.id=id; b.textContent=lab; b.onclick=fn; b.style.padding='2px 10px'; tog.appendChild(b); };
+  if(_rcKind==='npv') tb('rc-roi', _rcRoi==='10'?'Ver ROI 20% →':'← Ver ROI 10%', ()=>{ _rcRoi=_rcRoi==='10'?'20':'10'; buildRcControls(); drawRC(); });
+  tb('rc-per', _rcPer==='a'?'← % ao mês':'Ver % ao ano →', ()=>{ _rcPer=_rcPer==='m'?'a':'m'; buildRcControls(); drawRC(); });
+  _rcInit=true; _rcSync();
+}
+function _rcSync(){ document.querySelectorAll('#rc-chips .chip').forEach(c=>c.classList.toggle('off',!_rcVis.has(+c.textContent))); }
+function drawRC(){
+  const svg=document.getElementById('svg-rc'); if(!svg) return;
+  const NS='http://www.w3.org/2000/svg', W=920,HT=460,M={l:56,r:14,t:16,b:36},PW=W-M.l-M.r,PH=HT-M.t-M.b;
+  const prazos=RATECURVE.prazos, n=prazos.length, fld=_rcField(), series=RATECURVE[_rcKind];
+  const unidade=_rcPer==='a'?'% ao ano':'% ao mês';
+  document.getElementById('rc-title').textContent=(_rcKind==='bk'?'Taxa mínima (break-even)':'Taxa de pricing (NPV)')+' por prazo, por categoria';
+  document.getElementById('rc-sub').textContent=(_rcKind==='bk'?'Taxa que recupera o principal':'ROI '+_rcRoi+'% · funding 1,2%/mês')+' · '+unidade+' · cada curva = uma categoria de risco';
+  let vmax=0; series.forEach(s=>{ if(_rcVis.has(s.k)) s[fld].forEach(v=>{ if(v>vmax)vmax=v; }); });
+  vmax=Math.max(vmax*1.08, 0.5);
+  const xP=i=>M.l+(n<=1?0:i/(n-1))*PW, yP=v=>M.t+(1-v/vmax)*PH;
+  function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+  svg.innerHTML='';
+  const NT=5;
+  for(let g=0;g<=NT;g++){ const v=vmax*g/NT, y=yP(v);
+    svg.appendChild(el('line',{x1:M.l,y1:y,x2:W-M.r,y2:y,stroke:'#eee'}));
+    const t=el('text',{x:M.l-6,y:y+3,'text-anchor':'end','font-size':11,fill:'#666'}); t.textContent=v.toFixed(v<5?1:0)+'%'; svg.appendChild(t); }
+  prazos.forEach((p,i)=>{ const x=xP(i);
+    const t=el('text',{x:x,y:M.t+PH+16,'text-anchor':'middle','font-size':10.5,fill:'#666'}); t.textContent='T='+p; svg.appendChild(t); });
+  svg.appendChild(el('line',{x1:M.l,y1:M.t,x2:M.l,y2:M.t+PH,stroke:'#999'}));
+  svg.appendChild(el('line',{x1:M.l,y1:M.t+PH,x2:W-M.r,y2:M.t+PH,stroke:'#999'}));
+  const yl=el('text',{'text-anchor':'middle','font-size':11,fill:'#1b2430',transform:'translate(15,'+(M.t+PH/2)+') rotate(-90)'}); yl.textContent='taxa de juros ('+unidade+')'; svg.appendChild(yl);
+  const xl=el('text',{x:M.l+PW/2,y:HT-4,'text-anchor':'middle','font-size':11,fill:'#1b2430'}); xl.textContent='prazo do contrato (meses)'; svg.appendChild(xl);
+  series.forEach(s=>{ if(!_rcVis.has(s.k))return; const arr=s[fld];
+    let d='M '+xP(0)+' '+yP(arr[0]); for(let i=1;i<n;i++)d+=' L '+xP(i)+' '+yP(arr[i]);
+    svg.appendChild(el('path',{d:d,fill:'none',stroke:s.cor,'stroke-width':2}));
+    for(let i=0;i<n;i++)svg.appendChild(el('circle',{cx:xP(i),cy:yP(arr[i]),r:2.4,fill:s.cor})); });
+  const guide=el('line',{class:'guide',y1:M.t,y2:M.t+PH}); svg.appendChild(guide);
+  svg.onmousemove=ev=>{ const r=svg.getBoundingClientRect(); const sx=(ev.clientX-r.left)*(W/r.width);
+    let i=Math.round((sx-M.l)/PW*(n-1)); i=Math.max(0,Math.min(n-1,i));
+    if(sx<M.l-4||sx>W-M.r+4){tip.style.visibility='hidden';guide.style.visibility='hidden';return;}
+    guide.setAttribute('x1',xP(i));guide.setAttribute('x2',xP(i));guide.style.visibility='visible';
+    const vis=series.filter(s=>_rcVis.has(s.k)).sort((a,b)=>b[fld][i]-a[fld][i]);
+    if(!vis.length){tip.style.visibility='hidden';return;}
+    let html='<b>T = '+prazos[i]+' meses</b><br>';
+    vis.slice(0,14).forEach(s=>{html+='<span style="color:'+s.cor+'">■</span> Cat '+s.k+': <b>'+s[fld][i].toFixed(_rcPer==='a'?1:2)+'%</b><br>';});
+    tip.innerHTML=html; tip.style.left=Math.min(ev.clientX+12,window.innerWidth-190)+'px'; tip.style.top=(ev.clientY+12)+'px'; tip.style.visibility='visible'; };
+  svg.onmouseleave=()=>{tip.style.visibility='hidden';guide.style.visibility='hidden';};
+}
 </script>
 </body></html>"""
 
 HTML = (HTML.replace("__FONTS__", FONTS).replace("__SLIDES__", SLIDES)
             .replace("__DATA__", DATA).replace("__GROUPS__", GROUPS_JSON)
-            .replace("__RATE__", RATE_JSON)
+            .replace("__RATE__", RATE_JSON).replace("__RATECURVE__", RATECURVE_JSON)
             .replace("__IMP__", IMP_JSON).replace("__FEATINFO__", FEATINFO_JSON))
 with open(TMP, "w", encoding="utf-8") as f:
     f.write(HTML)
