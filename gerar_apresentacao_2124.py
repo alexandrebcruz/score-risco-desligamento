@@ -82,6 +82,25 @@ def bullet(fig, x, y, lines, fs=13, dy=0.062, color=INK, gap_color="#f4a722"):
         else:
             fig.text(x, yy, t, fontsize=fs, color=color, va="center", weight="bold")
 
+
+def secao(fig, x, y, txt, fs=13):
+    """Rótulo de seção (negrito navy)."""
+    fig.text(x, y, txt, fontsize=fs, color=NAVY, weight="bold", va="center")
+
+def prosa(fig, x, y, txt, fs=12.2, color=INK):
+    fig.text(x, y, txt, fontsize=fs, color=color, va="center")
+
+def formula_card(fig, x, y, w, h, tex, fs=19, label=None, face="#eef3f9", edge="#cfe0f0"):
+    """Caixa clara com a fórmula (mathtext) GRANDE e centralizada — fácil de ler."""
+    ax = fig.add_axes([x, y, w, h]); ax.axis("off"); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    ax.add_patch(FancyBboxPatch((0, 0), 1, 1, boxstyle="round,pad=0.018",
+                                facecolor=face, edgecolor=edge, linewidth=1.1))
+    yc = 0.5
+    if label:
+        ax.text(0.045, 0.80, label, fontsize=9.5, color=GREY, va="center")
+        yc = 0.34
+    ax.text(0.5, yc, f"${tex}$", ha="center", va="center", fontsize=fs, color=NAVY)
+
 PDF = "outputs/apresentacao_risco_2124.pdf"
 pages = []
 IDX = {}   # índices (0-based) de slides especiais p/ o deck HTML (robusto a reordenação)
@@ -612,19 +631,23 @@ divisor("Apêndice C — Política de prazos e taxas do consignado",
 def consignado_conceitos():
     fig = new_slide(); header(fig, "APLICAÇÃO · COMO LER AS TABELAS",
                               "Da curva de sobrevivência aos números da política")
-    bullet(fig, 0.05, 0.77, [
-        (False, "Ponto de partida: S(t), a curva de sobrevivência da categoria"),
-        (True, "S(t) = probabilidade de o vínculo seguir ativo t meses após a entrada."),
-        (True, "Até 12 meses: medida direto dos dados (Kaplan-Meier); além de 12:"),
-        (None, r"extrapolada pela curva de Weibull $S(t)=\exp(-(t/\lambda)^{p})$ ajustada à categoria."),
-        (False, "Prazo máximo por confiança c  (tabela da esquerda)"),
-        (True, "É o maior prazo t com confiança c de o tomador seguir empregado:"),
-        (None, r"$S(t)=c \;\Rightarrow\; t=\lambda\,(-\ln c)^{1/p}$.  Ex.: c=90% → prazo onde S cai a 0,90."),
-        (True, "Colunas 95/90/85/80% = quão conservador é o limite (maior c = prazo menor)."),
-        (False, "Cobertura esperada de parcelas T  (tabela da direita)"),
-        (True, "Fração média das T parcelas que devem ser pagas em folha (com vínculo):"),
-        (None, r"$\mathrm{cob}(T)=[\,S(1)+S(2)+\cdots+S(T)\,]\,/\,T$.  Ex.: 90% ≈ 9 de cada 10 parcelas."),
-    ], fs=12.2, dy=0.0585)
+    LX = 0.05
+    secao(fig, LX, 0.785, "Ponto de partida — a curva de sobrevivência S(t)")
+    prosa(fig, LX, 0.737, "S(t) = probabilidade de o vínculo seguir ativo t meses após a entrada.", fs=12.4)
+    prosa(fig, LX, 0.702, "≤12 meses: medido nos dados (Kaplan-Meier);  >12: extrapolado por Weibull:", fs=12.0, color=GREY)
+    formula_card(fig, LX, 0.590, 0.55, 0.095, r"S(t)=\exp\!\left(-(t/\lambda)^{p}\right)", fs=20,
+                 label="λ = escala · p = forma (ajustados por categoria)")
+
+    secao(fig, LX, 0.520, "Prazo máximo por confiança c  (tabela da esquerda)")
+    prosa(fig, LX, 0.477, "maior prazo t com confiança c de o tomador seguir empregado:", fs=12.0, color=GREY)
+    formula_card(fig, LX, 0.365, 0.55, 0.095, r"t=\lambda\,(-\ln c)^{1/p}", fs=20,
+                 label="Ex.: c = 90% → prazo onde S cai a 0,90")
+
+    secao(fig, LX, 0.295, "Cobertura esperada de parcelas T  (tabela da direita)")
+    prosa(fig, LX, 0.252, "fração média das T parcelas pagas em folha (enquanto há vínculo):", fs=12.0, color=GREY)
+    formula_card(fig, LX, 0.135, 0.55, 0.100,
+                 r"\mathrm{cob}(T)=\frac{S(1)+S(2)+\cdots+S(T)}{T}", fs=19)
+
     ax = fig.add_axes([0.63, 0.13, 0.33, 0.60]); ax.set_xlim(0, 36); ax.set_ylim(0, 1.02)
     import numpy as _np
     from math import log as _ln
@@ -687,19 +710,24 @@ IDX["CTAB"] = len(pages) - 1
 def taxa_conceitos():
     fig = new_slide(); header(fig, "APLICAÇÃO · TAXA DE JUROS MÍNIMA",
                               "Da cobertura de parcelas à taxa de equilíbrio")
-    bullet(fig, 0.05, 0.77, [
-        (False, "A pergunta"),
-        (True, "Qual a MENOR taxa que ainda recupera o valor emprestado, dado que parte"),
-        (None, "das parcelas deixa de ser paga quando o tomador é desligado?"),
-        (False, "O modelo financeiro (Tabela Price)"),
-        (True, r"Parcela fixa:  $A=P\,i/(1-(1+i)^{-T})$   (P = principal, i = juros, T = prazo)."),
-        (True, "Só se paga a parcela do mês m se o vínculo seguir ativo — prob. S(m)."),
-        (None, r"Recebido esperado $=A\sum S(m)=A\,T\,\mathrm{cob}(T)$."),
-        (False, "Break-even (receber ≥ principal)"),
-        (True, r"$A\,T\,\mathrm{cob}(T)\geq P \;\Leftrightarrow\; i\,T\,c\,/\,(1-(1+i)^{-T})\geq 1$."),
-        (True, "Resolve-se i (a taxa mínima) numericamente para cada categoria e prazo;"),
-        (None, r"anual $=(1+i)^{12}-1$.  É um PISO de quebra-zero — some custo de funding + margem."),
-    ], fs=12.1, dy=0.0575)
+    LX = 0.05
+    secao(fig, LX, 0.785, "A pergunta")
+    prosa(fig, LX, 0.735, "Qual a MENOR taxa que recupera o valor emprestado, sabendo que parte das", fs=12.4)
+    prosa(fig, LX, 0.700, "parcelas deixa de ser paga quando o tomador é desligado?", fs=12.4)
+
+    secao(fig, LX, 0.635, "Parcela fixa (Tabela Price)")
+    formula_card(fig, LX, 0.520, 0.55, 0.095, r"A=\frac{P\,i}{1-(1+i)^{-T}}", fs=20,
+                 label="P = principal · i = juros · T = prazo")
+
+    secao(fig, LX, 0.455, "Recebido esperado")
+    prosa(fig, LX, 0.412, "só se paga a parcela do mês m se o vínculo seguir ativo (prob. S(m)):", fs=12.0, color=GREY)
+    formula_card(fig, LX, 0.300, 0.55, 0.095,
+                 r"\mathrm{recebido}=A\!\sum_{m=1}^{T}\! S(m)=A\,T\,\mathrm{cob}(T)", fs=19)
+
+    secao(fig, LX, 0.235, "Break-even — recuperar o principal")
+    formula_card(fig, LX, 0.120, 0.55, 0.095,
+                 r"\frac{i\,T\,\mathrm{cob}(T)}{1-(1+i)^{-T}}\;\geq\;1", fs=20,
+                 face="#eaf6ee", edge="#bfe2cb")
     # ---- diagrama: recebido esperado ÷ principal, à MESMA taxa (1%/mês, T=24) ----
     import numpy as _np
     ax = fig.add_axes([0.635, 0.155, 0.335, 0.545])
@@ -782,19 +810,24 @@ IDX["TAXTAB"] = len(pages) - 1
 def npv_conceitos():
     fig = new_slide(); header(fig, "APLICAÇÃO · PRICING POR NPV",
                               "Do piso de quebra-zero à taxa que dá retorno")
-    bullet(fig, 0.05, 0.78, [
-        (False, "Por que o piso não basta"),
-        (True, "O break-even ignora dois custos reais: o DINHEIRO TEM PREÇO (captação)"),
-        (None, "e um real amanhã vale menos que um real hoje (valor do tempo)."),
-        (False, "Valor Presente Líquido (NPV)"),
-        (True, "Traz cada parcela esperada para valor de hoje, descontando ao custo"),
-        (None, r"de captação $r_f$:   $\mathrm{NPV}=-P+\sum A\,S(m)/(1+r_f)^{m}$."),
-        (True, r"$S(m)$ já embute o risco de desligamento; $r_f$ cobra o funding."),
-        (False, "Taxa de pricing (com retorno-alvo)"),
-        (True, r"Escolhe-se i tal que $\mathrm{NPV}=\mathrm{ROI}\cdot P$ (lucro a VP = ROI sobre o emprestado):"),
-        (None, r"$i\,/\,(1-(1+i)^{-T})=(1+\mathrm{ROI})\,/\,D$,   $D=\sum S(m)/(1+r_f)^{m}$."),
-        (True, r"Break-even é o caso particular $r_f=0$ e ROI $=0$."),
-    ], fs=12.0, dy=0.0565)
+    LX = 0.05
+    secao(fig, LX, 0.785, "Por que o piso (break-even) não basta")
+    prosa(fig, LX, 0.738, "Ele ignora dois custos reais: o dinheiro tem preço (captação) e um real", fs=12.2)
+    prosa(fig, LX, 0.704, "amanhã vale menos que um real hoje (valor do tempo).", fs=12.2)
+
+    secao(fig, LX, 0.638, "Valor Presente Líquido (NPV)")
+    prosa(fig, LX, 0.593, r"traz cada parcela esperada a valor de hoje, ao custo de captação $r_f$:",
+          fs=12.0, color=GREY)
+    formula_card(fig, LX, 0.470, 0.56, 0.105,
+                 r"\mathrm{NPV}=-P+\sum_{m=1}^{T}\frac{A\,S(m)}{(1+r_f)^{m}}", fs=18)
+
+    secao(fig, LX, 0.398, "Taxa de pricing — retorno-alvo ROI")
+    prosa(fig, LX, 0.355, "escolhe-se i tal que NPV = ROI·P (lucro a valor presente = ROI do principal):",
+          fs=12.0, color=GREY)
+    formula_card(fig, LX, 0.215, 0.56, 0.120,
+                 r"\frac{i}{1-(1+i)^{-T}}=\frac{1+\mathrm{ROI}}{D}\,,\quad D=\sum_{m=1}^{T}\frac{S(m)}{(1+r_f)^{m}}",
+                 fs=17, face="#eaf6ee", edge="#bfe2cb")
+    prosa(fig, LX, 0.150, r"Break-even é o caso particular  $r_f=0$  e  ROI $=0$.", fs=11.5, color=GREY)
     # diagrama: taxa sobe do piso -> ROI 10% -> ROI 20% (ex.: cat 4 e cat 8, T=24)
     import numpy as _np
     ax = fig.add_axes([0.64, 0.155, 0.325, 0.545])
@@ -817,14 +850,6 @@ def npv_conceitos():
     ax.grid(axis="y", alpha=.25, zorder=0); ax.tick_params(labelsize=8, length=0)
     for sp in ("top", "right", "left"): ax.spines[sp].set_visible(False)
     ax.spines["bottom"].set_color("#c8d0db")
-    # callout: comportamento da taxa com o prazo por causa do ROI
-    axn = fig.add_axes([0.05, 0.085, 0.555, 0.125]); axn.axis("off"); axn.set_xlim(0, 1); axn.set_ylim(0, 1)
-    axn.add_patch(FancyBboxPatch((0, 0), 1, 1, boxstyle="round,pad=0.02", facecolor="#eaf1f9",
-                                 edgecolor="#9fc0e8", linewidth=1))
-    axn.text(0.04, 0.80, "▼  Efeito do ROI no prazo", fontsize=10.5, weight="bold", color=BLUE, va="center")
-    axn.text(0.04, 0.42, "No BAIXO risco a taxa CAI com o prazo: a margem-alvo se dilui\n"
-             "em mais meses de pagamento quase certo (no alto risco, some).",
-             fontsize=9.2, color=INK, va="center", linespacing=1.4)
     fig.text(0.05, 0.055, "Premissas ilustrativas: captação 1,2%/mês; ROI = lucro a valor presente (% do "
              "principal); ZERO recuperação após o desligamento; falta somar custo operacional.",
              fontsize=9.3, color=GREY)
@@ -853,13 +878,9 @@ def consignado_taxas_npv():
     info = [("Captação", "1,2%/mês"), ("ROI-alvo", "10% (mostrado)"),
             ("Alt. ROI", "20% (no HTML)"), ("Recuperação", "0% pós-deslig.")]
     for k, (a, b) in enumerate(info):
-        y = 0.80 - k * 0.105
+        y = 0.78 - k * 0.16
         ax2.text(0.07, y, a, fontsize=10.5, color=INK, va="center", weight="bold")
         ax2.text(0.93, y, b, fontsize=10, color=BLUE, va="center", ha="right")
-    ax2.add_patch(Rectangle((0.06, 0.30), 0.88, 0.005, color="#cdd5df"))
-    ax2.text(0.5, 0.245, "▼ Efeito do ROI", ha="center", fontsize=10, weight="bold", color=BLUE)
-    ax2.text(0.5, 0.115, "no baixo risco a taxa CAI\ncom o prazo (margem diluída\nem mais meses quase certos)",
-             ha="center", fontsize=8.6, color=INK, va="center")
     fig.text(0.74, 0.075, "No HTML: botões alternam ROI\n(10%/20%) e mês/ano.", fontsize=9, color=GREY)
     fig.text(0.05, 0.045, r"Pricing-alvo: i tal que $\mathrm{NPV}=\mathrm{ROI}\cdot P$ (lucro a valor presente). Inclui funding e valor "
              "do tempo; some custo operacional e perdas residuais. Categorias altas exigem prazos curtos.",
