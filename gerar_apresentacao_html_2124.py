@@ -529,8 +529,10 @@ HTML = r"""<!DOCTYPE html>
   .modalbox .x{position:absolute;top:calc(var(--u)*0.6);right:calc(var(--u)*1.0);font-size:calc(var(--u)*2.2);
                color:#5b6675;cursor:pointer;background:none;border:none;line-height:1;}
   .modalbox .x:hover{color:#d73027;}
-  .ratectrls{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 4px;}
+  .ratectrls{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 4px;align-items:center;}
   .ratectrls button{font-size:12px;padding:2px 9px;border-radius:5px;border:1px solid #bbb;background:#f7f7f7;cursor:pointer;font-weight:600;}
+  .ratectrls .taxbtn{background:#2c5f9e;color:#fff;border:none;}
+  .ratectrls .taxbtn:hover{background:#f4a722;color:#14233f;}
   .ratechips{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px;}
   .ratechips .chip{width:26px;height:21px;border-radius:4px;border:1.5px solid var(--c);background:var(--c);color:#fff;font-size:11px;font-weight:700;cursor:pointer;padding:0;}
   .ratechips .chip.off{background:#fff;color:#bbb;border-color:#ddd;}
