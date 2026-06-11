@@ -52,7 +52,8 @@ def gcolor(cat):
         if cat in cs: return c
     return GREY
 
-plt.rcParams.update({"font.family": "DejaVu Sans", "axes.edgecolor": "#c8d0db"})
+plt.rcParams.update({"font.family": "DejaVu Sans", "axes.edgecolor": "#c8d0db",
+                     "mathtext.fontset": "dejavusans", "mathtext.default": "it"})
 
 def new_slide():
     fig = plt.figure(figsize=(W, H)); fig.patch.set_facecolor("white")
@@ -271,7 +272,7 @@ def metodo_cat():
     bullet(fig, 0.05, 0.76, [
         (False, "Cortes ótimos"),
         (True, "Para cada K, programação dinâmica acha os cortes de probabilidade"),
-        (None, "que maximizam a informação mútua I(faixa; alvo) em 2021–2024."),
+        (None, r"que maximizam a informação mútua $I(\mathrm{faixa};\,\mathrm{alvo})$ em 2021–2024."),
         (False, "Critério de K — duplo"),
         (True, "O risco médio das faixas deve crescer estritamente no AGREGADO"),
         (None, "e DENTRO de cada ano (2021, 22, 23 e 24) individualmente."),
@@ -541,7 +542,7 @@ def surv_curva():
         (True, "Evento = dispensa s/ justa causa; censura = ativo ou outra saída."),
         (True, "Pré-existente entra em janeiro; admitido no ano, no mês de admissão."),
         (False, "Kaplan–Meier"),
-        (True, "S(t) = Π (nₘ−dₘ)/nₘ — usa a censura sem viés, mês a mês."),
+        (True, r"$S(t)=\prod_m (n_m-d_m)/n_m$ — usa a censura sem viés, mês a mês."),
         (True, "4 safras agregadas → sazonalidade de calendário diluída."),
     ], fs=12.4, dy=0.063)
     ax = fig.add_axes([0.50, 0.10, 0.48, 0.70])
@@ -557,8 +558,8 @@ def surv_weibull():
         (False, "O problema"),
         (True, "12 meses de dado não enxergam além de 12m (a curva ainda está alta)."),
         (False, "Solução: forma paramétrica de Weibull"),
-        (True, "S(t) = exp(−(t/λ)ᵖ);  hazard ∝ t^(p−1)."),
-        (True, "Ajuste por regressão pura: ln(−ln S) = p·ln t + ln α (OLS, 12 pts)."),
+        (True, r"$S(t)=\exp(-(t/\lambda)^{p})$;  hazard $\propto t^{\,p-1}$."),
+        (True, r"Ajuste por regressão pura: $\ln(-\ln S)=p\,\ln t+\ln\alpha$ (OLS, 12 pts)."),
         (True, "R² médio ≈ 0,994 — extrapola até 36 MOB (tracejado)."),
         (False, "Qualidade do ajuste"),
         (True, "Q1/mediana/média/Q3 decrescem monotonicamente com a categoria"),
@@ -615,14 +616,14 @@ def consignado_conceitos():
         (False, "Ponto de partida: S(t), a curva de sobrevivência da categoria"),
         (True, "S(t) = probabilidade de o vínculo seguir ativo t meses após a entrada."),
         (True, "Até 12 meses: medida direto dos dados (Kaplan-Meier); além de 12:"),
-        (None, "extrapolada pela curva de Weibull S(t)=exp(−(t/λ)ᵖ) ajustada à categoria."),
+        (None, r"extrapolada pela curva de Weibull $S(t)=\exp(-(t/\lambda)^{p})$ ajustada à categoria."),
         (False, "Prazo máximo por confiança c  (tabela da esquerda)"),
         (True, "É o maior prazo t com confiança c de o tomador seguir empregado:"),
-        (None, "S(t) = c  ⇒  t = λ·(−ln c)^(1/p).  Ex.: c=90% → prazo onde S cai a 0,90."),
+        (None, r"$S(t)=c \;\Rightarrow\; t=\lambda\,(-\ln c)^{1/p}$.  Ex.: c=90% → prazo onde S cai a 0,90."),
         (True, "Colunas 95/90/85/80% = quão conservador é o limite (maior c = prazo menor)."),
         (False, "Cobertura esperada de parcelas T  (tabela da direita)"),
         (True, "Fração média das T parcelas que devem ser pagas em folha (com vínculo):"),
-        (None, "cobertura(T) = (S(1)+S(2)+…+S(T)) / T.  Ex.: 90% ≈ 9 de cada 10 parcelas."),
+        (None, r"$\mathrm{cob}(T)=[\,S(1)+S(2)+\cdots+S(T)\,]\,/\,T$.  Ex.: 90% ≈ 9 de cada 10 parcelas."),
     ], fs=12.2, dy=0.0585)
     ax = fig.add_axes([0.63, 0.13, 0.33, 0.60]); ax.set_xlim(0, 36); ax.set_ylim(0, 1.02)
     import numpy as _np
@@ -677,7 +678,7 @@ def consignado_tabelas():
         tb2[i, 0].set_facecolor(gcolor(cell2[i-1][0])); tb2[i, 0].set_text_props(color="white", weight="bold")
     fig.text(0.42, 0.83, "Cobertura esperada de parcelas (% pagas em folha) por prazo T", fontsize=11.5,
              weight="bold", color=INK)
-    fig.text(0.03, 0.035, "Prazo: t = λ·(−ln c)^(1/p). Cobertura: Σ S(m)/T, com S = KM (≤12 MOB) + Weibull (>12). "
+    fig.text(0.03, 0.035, r"Prazo: $t=\lambda(-\ln c)^{1/p}$.  Cobertura: $\sum S(m)/T$, com S = KM (≤12 MOB) + Weibull (>12). "
              "Referência 2021–2024. >12m é projeção.", fontsize=9.5, color=GREY)
     footer(fig, "C2"); pages.append(fig)
 consignado_tabelas()
@@ -691,13 +692,13 @@ def taxa_conceitos():
         (True, "Qual a MENOR taxa que ainda recupera o valor emprestado, dado que parte"),
         (None, "das parcelas deixa de ser paga quando o tomador é desligado?"),
         (False, "O modelo financeiro (Tabela Price)"),
-        (True, "Parcela fixa:  A = P · i / (1 − (1+i)^−T)   (P = principal, i = juros, T = prazo)."),
+        (True, r"Parcela fixa:  $A=P\,i/(1-(1+i)^{-T})$   (P = principal, i = juros, T = prazo)."),
         (True, "Só se paga a parcela do mês m se o vínculo seguir ativo — prob. S(m)."),
-        (None, "Recebido esperado = A · Σ S(m) = A · T · cobertura(T)."),
+        (None, r"Recebido esperado $=A\sum S(m)=A\,T\,\mathrm{cob}(T)$."),
         (False, "Break-even (receber ≥ principal)"),
-        (True, "A · T · cobertura(T) ≥ P   ⟺   i · T · c / (1 − (1+i)^−T) ≥ 1."),
+        (True, r"$A\,T\,\mathrm{cob}(T)\geq P \;\Leftrightarrow\; i\,T\,c\,/\,(1-(1+i)^{-T})\geq 1$."),
         (True, "Resolve-se i (a taxa mínima) numericamente para cada categoria e prazo;"),
-        (None, "anual = (1+i)¹² − 1.  É um PISO de quebra-zero — some custo de funding + margem."),
+        (None, r"anual $=(1+i)^{12}-1$.  É um PISO de quebra-zero — some custo de funding + margem."),
     ], fs=12.1, dy=0.0575)
     # ---- diagrama: recebido esperado ÷ principal, à MESMA taxa (1%/mês, T=24) ----
     import numpy as _np
@@ -787,12 +788,12 @@ def npv_conceitos():
         (None, "e um real amanhã vale menos que um real hoje (valor do tempo)."),
         (False, "Valor Presente Líquido (NPV)"),
         (True, "Traz cada parcela esperada para valor de hoje, descontando ao custo"),
-        (None, "de captação r_f:   NPV = −P + Σ A·S(m) / (1+r_f)^m."),
-        (True, "S(m) já embute o risco de desligamento; r_f cobra o funding."),
+        (None, r"de captação $r_f$:   $\mathrm{NPV}=-P+\sum A\,S(m)/(1+r_f)^{m}$."),
+        (True, r"$S(m)$ já embute o risco de desligamento; $r_f$ cobra o funding."),
         (False, "Taxa de pricing (com retorno-alvo)"),
-        (True, "Escolhe-se i tal que NPV = ROI·P (lucro a VP = ROI sobre o emprestado):"),
-        (None, "i / (1−(1+i)^−T) = (1+ROI) / D,   D = Σ S(m)/(1+r_f)^m."),
-        (True, "Break-even é o caso particular r_f = 0 e ROI = 0."),
+        (True, r"Escolhe-se i tal que $\mathrm{NPV}=\mathrm{ROI}\cdot P$ (lucro a VP = ROI sobre o emprestado):"),
+        (None, r"$i\,/\,(1-(1+i)^{-T})=(1+\mathrm{ROI})\,/\,D$,   $D=\sum S(m)/(1+r_f)^{m}$."),
+        (True, r"Break-even é o caso particular $r_f=0$ e ROI $=0$."),
     ], fs=12.0, dy=0.0565)
     # diagrama: taxa sobe do piso -> ROI 10% -> ROI 20% (ex.: cat 4 e cat 8, T=24)
     import numpy as _np
@@ -860,7 +861,7 @@ def consignado_taxas_npv():
     ax2.text(0.5, 0.115, "no baixo risco a taxa CAI\ncom o prazo (margem diluída\nem mais meses quase certos)",
              ha="center", fontsize=8.6, color=INK, va="center")
     fig.text(0.74, 0.075, "No HTML: botões alternam ROI\n(10%/20%) e mês/ano.", fontsize=9, color=GREY)
-    fig.text(0.05, 0.045, "Pricing-alvo: i tal que NPV = ROI·P (lucro a valor presente). Inclui funding e valor "
+    fig.text(0.05, 0.045, r"Pricing-alvo: i tal que $\mathrm{NPV}=\mathrm{ROI}\cdot P$ (lucro a valor presente). Inclui funding e valor "
              "do tempo; some custo operacional e perdas residuais. Categorias altas exigem prazos curtos.",
              fontsize=9.5, color=GREY)
     footer(fig, "C6"); pages.append(fig)
