@@ -52,18 +52,29 @@ Cadeia completa, na ordem (cada etapa lê a saída da anterior):
    **K\*=14** (quebra em K=15/ano 2024; 99,1% do IG). Ordenação validada em TODOS os
    anos 2016–2025 (`resumo_categoria_ano_2124.py`). Materialização in-place:
    `add_categoria_risco_2124.py`. Bordas: `outputs/tables/binning_infogain_escolhido_2124.csv`.
-5. **Personas** (`persona_categorias_2124.py`, ref. 21–24, 1 passada p/ geral+privado) →
-   `persona_categorias_2124{,_privado}.csv`. Grupos de risco (decks): Mínimo[1],
-   Baixo[2-4], Médio-Baixo[5-7], Médio[8-10], Alto[11-14]. **Se mudar K, reescrever.**
+5. **Personas** (`persona_categorias_2124.py`; referência default = **2025**, via
+   `ANOS_REF` na argv — o docstring antigo dizia 21–24, mas o perfil descrito nos decks
+   é o de 2025; 1 passada p/ geral+privado) → `persona_categorias_2124{,_privado}.csv`.
+   Grupos de risco (decks): Mínimo[1], Baixo[2-4], Médio-Baixo[5-7], Médio[8-10],
+   Alto[11-14]. **Se mudar K, reescrever.**
 6. **Sobrevivência MOB** (`sobrevivencia_mob_2124.py`, ref. 21–24 agregados): KM ≤12 MOB
    + Weibull cloglog >12 (R²=0,994) + isotônica (0 inversões — frailty quase sumiu) →
    `sobrevivencia_*_mob_2124.csv` + figuras.
 7. **Política de consignado** (`tabelas_consignado_2124.py`): prazo máx. por confiança
    95/90/85/80 + cobertura de parcelas T=6..60 → `consignado_*_2124.csv`.
-8. **Decks** (não substituem os antigos): `gerar_apresentacao_2124.py` (PDF 29 slides),
-   `gerar_apresentacao_html_2124.py` (HTML c/ B1/B2/B3 interativos + tabela C1),
+8. **Decks** (não substituem os antigos): `gerar_apresentacao_2124.py` (PDF 34 slides),
+   `gerar_apresentacao_html_2124.py` (HTML autossuficiente/offline c/ B1/B2/B3
+   interativos + tabela C1 + navegação por swipe e aria),
    `gerar_apresentacao_diretoria_2124.py` (executivo 6 slides). Figuras de apoio:
-   `fig_modelo_2124.py`.
+   `fig_modelo_2124.py`. Convenções dos decks 2124 (manter):
+   - números dos bullets de persona são COMPUTADOS dos CSVs de personas
+     (`_PIDX`/`_rngc`/`_liftmax` em gerar_apresentacao_2124.py) — só a narrativa
+     qualitativa é manual; nada de número hardcoded que descole dos dados;
+   - chips de característica com lift ≈ 1 (±0,15) viram "≈ média" cinza, sem seta ▲/▼;
+   - prazos máximos do consignado: truncados p/ baixo (floor; "<1" quando <1 mês) —
+     nunca round, que superestimaria o prazo seguro;
+   - referências temporais: slide 8 e tabelas C = pooled 2021–24; personas = perfil
+     2025 (sempre rotular qual é qual).
 
 Aprendizados novos (não reintroduzir):
 - `tempo_vinculo_meses` da RAIS é medido no FIM do vínculo → vazava o "quando" do alvo

@@ -139,7 +139,8 @@ def contexto():
     bullet(fig, 0.05, 0.76, [
         (False, "Objetivo"),
         (True, "Estimar a probabilidade de um vínculo formal ser encerrado por"),
-        (None, "dispensa sem justa causa nos meses seguintes."),
+        (None, "dispensa sem justa causa até o fim do ano-calendário observado"),
+        (None, "(vigente: exposição de jan. a dez.; admitido: do mês de admissão a dez.)."),
         (False, "Dados"),
         (True, "RAIS — registro oficial de todos os vínculos formais do país."),
         (True, "10 anos de microdados (2016–2025), 743 milhões de vínculos."),
@@ -380,34 +381,65 @@ def gradiente_persona():
 gradiente_persona()
 
 # ======================= 11–15. PERSONAS POR GRUPO =======================
+# Números dos bullets RECALCULADOS dos CSVs de personas (mesma referência das tabelas:
+# 2025) — nada fica hardcoded p/ não descolar dos dados quando o pipeline rodar de novo.
+import re as _re
+_PIDX = PERS.set_index("categoria")
+_PIDX_PRIV = PERS_PRIV.set_index("categoria")
+def _br(v, nd=1):
+    """número pt-BR: 13.15 -> '13,2'."""
+    return f"{v:.{nd}f}".replace(".", ",")
+def _rngc(idx, cats, col, nd=0):
+    """faixa 'lo–hi' de uma coluna nas categorias do grupo (pt-BR)."""
+    vs = idx.loc[list(cats), col]
+    return f"{_br(vs.min(), nd)}–{_br(vs.max(), nd)}"
+def _liftmax(idx, cats, col, codes):
+    """maior lift dos códigos citados no texto, parseado de *_distintivo ('84(63%/lift4.3)')."""
+    best = 0.0
+    for c in cats:
+        s = str(idx.loc[c, col])
+        for code in codes:
+            m = _re.search(rf"(?<!\d){code}\(\d+%/lift([\d.]+)\)", s)
+            if m: best = max(best, float(m.group(1)))
+    return best
+def _sharemax(idx, cats, col, codes):
+    """maior share (%) dos códigos citados no texto, parseado de *_distintivo."""
+    best = 0.0
+    for c in cats:
+        s = str(idx.loc[c, col])
+        for code in codes:
+            m = _re.search(rf"(?<!\d){code}\((\d+)%/lift", s)
+            if m: best = max(best, float(m.group(1)))
+    return best
+
 PERSONA_TXT = {
     "Risco Mínimo": ("O servidor público estável",
-        ["Setor público domina (75%): estatutários (71%), militares e profissionais de nível "
-         "superior; administração pública (CNAE 84, lift 4,6×).",
-         "Quase 13 anos de casa na entrada, 45 anos de idade, 52% com nível superior e 28% "
-         "ganhando acima de 5 SM; 85% em grandes organizações.",
-         "Estabilidade legal e senioridade → risco quase nulo (0,6% ao ano)."]),
+        [f"Setor público domina ({_PIDX.loc[1, 'publico%']:.0f}%): estatutários ({_PIDX.loc[1, 'estatut%']:.0f}%), militares e profissionais de nível "
+         f"superior; administração pública (CNAE 84, lift {_br(_liftmax(_PIDX, [1], 'cnae2_distintivo', [84]))}×).",
+         f"{_br(_PIDX.loc[1, 'tempo_anos'])} anos de casa na entrada, {_PIDX.loc[1, 'idade_media']:.0f} anos de idade, {_PIDX.loc[1, 'superior%']:.0f}% com nível superior e {_PIDX.loc[1, 'rem_alta%']:.0f}% "
+         f"ganhando acima de 5 SM; {_PIDX.loc[1, 'grande%']:.0f}% em grandes organizações.",
+         f"Estabilidade legal e senioridade → risco quase nulo ({_br(_PIDX.loc[1, 'taxa_y'])}% ao ano)."]),
     "Risco Baixo": ("CLT qualificado e consolidado (saúde e serviços profissionais)",
-        ["CLT por prazo indeterminado (72–77%) em saúde (CNAE 86), seleção/agenciamento de RH "
+        [f"CLT por prazo indeterminado ({_rngc(_PIDX, [2, 3, 4], 'clt_indet%')}%) em saúde (CNAE 86), seleção/agenciamento de RH "
          "(78) e educação; profissionais e técnicos (CBO 2/3).",
-         "3,4–4,3 anos de casa na entrada, 24–31% com superior, empresas médias e grandes.",
-         "Vínculo maduro fora do setor público → risco 2,2–6,2%."]),
+         f"{_rngc(_PIDX, [2, 3, 4], 'tempo_anos', 1)} anos de casa na entrada, {_rngc(_PIDX, [2, 3, 4], 'superior%')}% com superior, empresas médias e grandes.",
+         f"Vínculo maduro fora do setor público → risco {_rngc(_PIDX, [2, 3, 4], 'taxa_y', 1)}%."]),
     "Risco Médio-Baixo": ("CLT do comércio e dos serviços de apoio",
         ["Comércio varejista (CNAE 47) e serviços de apoio a empresas (82); vendedores e "
          "operadores (CBO 5/7).",
-         "1,8–2,6 anos de casa, ~37 anos; Simples 24–29% e micro/pequenas 43–50%.",
-         "Rotatividade típica do comércio → risco 8,9–15,1%."]),
+         f"{_rngc(_PIDX, [5, 6, 7], 'tempo_anos', 1)} anos de casa, ~{_PIDX.loc[[5, 6, 7], 'idade_media'].mean():.0f} anos; Simples {_rngc(_PIDX, [5, 6, 7], 'simples%')}% e micro/pequenas {_rngc(_PIDX, [5, 6, 7], 'micro_peq%')}%.",
+         f"Rotatividade típica do comércio → risco {_rngc(_PIDX, [5, 6, 7], 'taxa_y', 1)}%."]),
     "Risco Médio": ("Alimentação e varejo de alta rotação",
-        ["Bares e restaurantes (CNAE 56, lift até 1,9×) e varejo; trabalhadores mais jovens "
-         "(~34 anos) e vínculos curtos (1,1–1,5 ano na entrada).",
-         "Remuneração baixa cresce (20→33% até 1 SM); Simples 35–42%; micro/pequenas 55–64%.",
-         "Setores de giro estrutural → risco 19–28,6%."]),
+        [f"Bares e restaurantes (CNAE 56, lift até {_br(_liftmax(_PIDX, [8, 9, 10], 'cnae2_distintivo', [56]))}×) e varejo; trabalhadores mais jovens "
+         f"(~{_PIDX.loc[[8, 9, 10], 'idade_media'].mean():.0f} anos) e vínculos curtos ({_rngc(_PIDX, [8, 9, 10], 'tempo_anos', 1)} ano na entrada).",
+         f"Remuneração até 1 SM em {_rngc(_PIDX, [8, 9, 10], 'rem_baixa%')}%; Simples {_rngc(_PIDX, [8, 9, 10], 'simples%')}%; micro/pequenas {_rngc(_PIDX, [8, 9, 10], 'micro_peq%')}%.",
+         f"Setores de giro estrutural → risco {_rngc(_PIDX, [8, 9, 10], 'taxa_y', 1)}%."]),
     "Risco Alto": ("Operário da construção civil em micro construtora",
-        ["Construção de edifícios e infraestrutura (CNAE 41/42, lift até 8×); trabalhadores "
-         "da produção (CBO 7, até 47%).",
-         "Micro/pequenas construtoras (63–86%), escolaridade baixa (até-fundamental 10–15%), "
-         "remuneração até 1 SM em 29–49%; ~1–1,7 ano de casa.",
-         "Rotatividade ESTRUTURAL do setor: na cat 14, 72% são desligados no ano."]),
+        [f"Construção de edifícios e infraestrutura (CNAE 41/42, lift até {_br(_liftmax(_PIDX, [11, 12, 13, 14], 'cnae2_distintivo', [41, 42]))}×); trabalhadores "
+         f"da produção (CBO 7, até {_sharemax(_PIDX, [11, 12, 13, 14], 'cbo1_distintivo', [7]):.0f}%).",
+         f"Micro/pequenas construtoras ({_rngc(_PIDX, [11, 12, 13, 14], 'micro_peq%')}%), escolaridade baixa (até-fundamental {_rngc(_PIDX, [11, 12, 13, 14], 'ate_fund%')}%), "
+         f"remuneração até 1 SM em {_rngc(_PIDX, [11, 12, 13, 14], 'rem_baixa%')}%; {_rngc(_PIDX, [11, 12, 13, 14], 'tempo_anos', 1)} ano de casa.",
+         f"Rotatividade ESTRUTURAL do setor: na cat 14, {_PIDX.loc[14, 'taxa_y']:.0f}% são desligados no ano."]),
 }
 
 def grupo_slide(nome, cats, cor, n, pers=None, persona_txt=None, inds_spec=None, base_lbl="da base"):
@@ -442,13 +474,17 @@ def grupo_slide(nome, cats, cor, n, pers=None, persona_txt=None, inds_spec=None,
     rend = fig.canvas.get_renderer(); inv = ax.transData.inverted()
     for i, (lab, v, lift) in enumerate(notas):
         y = 0.80 - i * 0.105
-        up = lift >= 1.0
-        lc = "#1a9850" if up else "#d73027"
-        arw = "▲" if up else "▼"
+        # lift ≈ 1 não distingue o grupo da média — sem seta (a ▲/▼ viraria ruído de arredondamento)
+        if abs(lift - 1.0) < 0.15:
+            lc, ltxt = GREY, f"≈ média ({lift:.1f}×)"
+        else:
+            up = lift >= 1.0
+            lc = "#1a9850" if up else "#d73027"
+            ltxt = f"{'▲' if up else '▼'} lift {lift:.1f}×"
         ax.text(0.02, y, f"{v:.0f}%", fontsize=15, weight="bold", color=cor, va="center")
         tl = ax.text(0.18, y, lab, fontsize=12, color=INK, va="center")
         xend = inv.transform((tl.get_window_extent(renderer=rend).x1, 0))[0]
-        ax.text(xend + 0.025, y, f"{arw} lift {lift:.1f}×", fontsize=11.5, weight="bold", color=lc, va="center")
+        ax.text(xend + 0.025, y, ltxt, fontsize=11.5, weight="bold", color=lc, va="center")
     ax2 = fig.add_axes([0.54, 0.10, 0.43, 0.34]); ax2.axis("off"); ax2.set_xlim(0,1); ax2.set_ylim(0,1)
     cards = [("Risco médio do grupo", f"{taxa:.1f}%"), ("Idade média", f"{wavg('idade_media'):.0f} anos"),
              ("Tempo de casa (entrada)", f"{wavg('tempo_anos'):.1f} anos"), ("Ensino fundamental", f"{wavg('ate_fund%'):.0f}%")]
@@ -468,14 +504,19 @@ def fecho():
     ax.add_patch(Rectangle((0,0),1,1,color=NAVY))
     ax.add_patch(Rectangle((0.06,0.70),0.18,0.01,color="#f4a722"))
     ax.text(0.06, 0.78, "Síntese", color="white", fontsize=30, weight="bold")
+    # taxas de referência (T=24) computadas das tabelas do apêndice C — nada hardcoded
+    _bk = lambda c: float(TAXA.loc[TAXA.categoria == c, "m_T24"].iloc[0])
+    _npv = lambda c: float(TAXA_NPV.loc[TAXA_NPV.categoria == c, "m10_T24"].iloc[0])
     pts = [f"Ensemble treinado em 2021–24: AUC {pct(AUC25)} e KS {pct(KS25)} no futuro puro (2025).",
            "Desempenho estável em 10 safras (AUC 76–81%), incluindo a pandemia — generaliza p/ trás e p/ frente.",
            "14 categorias ótimas por ganho de informação, com ordenação validada DENTRO de cada ano (2016–2025).",
            "Personas (2025): do servidor público (%s%%) ao operário da construção em micro construtora (%s%%)."
            % (f"{PERS.taxa_y.min():.1f}".replace(".", ","), f"{PERS.taxa_y.max():.1f}".replace(".", ",")),
-           "Sobrevivência MOB (ref. 2021–24) alimenta a política de prazos do consignado (apêndices B e C)."]
+           "Sobrevivência MOB (ref. 2021–24) alimenta prazo máximo e cobertura de parcelas (apêndices B e C).",
+           f"Taxa mínima (quebra-zero, T=24): de {_br(_bk(1), 2)}%/mês (cat 1) a {_br(_bk(14))}%/mês (cat 14).",
+           f"Pricing por NPV (funding 1,2%/mês, ROI 10%, T=24): de {_br(_npv(1))}%/mês a {_br(_npv(14))}%/mês — apêndice C."]
     for i, t in enumerate(pts):
-        ax.text(0.06, 0.60 - i*0.082, "• " + t, color="#dbe6f3", fontsize=13.2)
+        ax.text(0.06, 0.60 - i*0.072, "• " + t, color="#dbe6f3", fontsize=13.2)
     ax.text(0.06, 0.10, "⚠ Uso ético/LGPD: análise agregada e descritiva; decisões sobre indivíduos exigem "
             "revisão humana e cuidado com vieses (setor, escolaridade, região).", color="#9fc0e8", fontsize=11)
     pages.append(fig)
@@ -483,30 +524,30 @@ def fecho():
 
 # ======================= APÊNDICE A — CONSIGNADO PRIVADO =======================
 PERSONA_TXT_PRIV = {
-    "Risco Mínimo": ("Veterano do setor financeiro e da saúde",
-        ["Sem o setor público, o piso de risco vira o financeiro (CNAE 64, lift 5,9×) e a "
-         "saúde (86); profissionais de nível superior (CBO 2, lift 2,3×).",
-         "5,8 anos de casa na entrada, 34% com superior, 21% acima de 5 SM; 57% em "
+    "Risco Mínimo": ("Veterano do setor financeiro",
+        [f"Sem o setor público, o piso de risco vira o financeiro (CNAE 64, lift {_br(_liftmax(_PIDX_PRIV, [1], 'cnae2_distintivo', [64]))}×) e as "
+         f"entidades sem fins lucrativos (94); profissionais de nível superior (CBO 2, lift {_br(_liftmax(_PIDX_PRIV, [1], 'cbo1_distintivo', [2]))}×).",
+         f"{_br(_PIDX_PRIV.loc[1, 'tempo_anos'])} anos de casa na entrada, {_PIDX_PRIV.loc[1, 'superior%']:.0f}% com superior, {_PIDX_PRIV.loc[1, 'rem_alta%']:.0f}% acima de 5 SM; {_PIDX_PRIV.loc[1, 'grande%']:.0f}% em "
          "empresas grandes.",
-         "É o piso do crédito privado: risco 0,6% ao ano."]),
+         f"É o piso do crédito privado: risco {_br(_PIDX_PRIV.loc[1, 'taxa_y'])}% ao ano."]),
     "Risco Baixo": ("CLT qualificado da saúde e dos serviços profissionais",
-        ["CLT indeterminado (82–85%) em saúde (86) e agenciamento/seleção de RH (78); "
+        [f"CLT indeterminado ({_rngc(_PIDX_PRIV, [2, 3, 4], 'clt_indet%')}%) em saúde (86) e agenciamento/seleção de RH (78); "
          "profissionais e técnicos (CBO 2/3).",
-         "3,5–4,1 anos de casa, 20–27% com superior; porte médio/grande.",
-         "Risco 2,2–6,1%, bem abaixo da média."]),
+         f"{_rngc(_PIDX_PRIV, [2, 3, 4], 'tempo_anos', 1)} anos de casa, {_rngc(_PIDX_PRIV, [2, 3, 4], 'superior%')}% com superior; porte médio/grande.",
+         f"Risco {_rngc(_PIDX_PRIV, [2, 3, 4], 'taxa_y', 1)}%, bem abaixo da média."]),
     "Risco Médio-Baixo": ("CLT do comércio e dos serviços de apoio",
         ["Comércio (47) e serviços de apoio (82); atacado (46) aparece no início do grupo.",
-         "1,9–2,8 anos de casa; Simples 27–32%; micro/pequenas 48–54%.",
-         "Rotatividade típica do comércio → risco 8,7–15,0%."]),
+         f"{_rngc(_PIDX_PRIV, [5, 6, 7], 'tempo_anos', 1)} anos de casa; Simples {_rngc(_PIDX_PRIV, [5, 6, 7], 'simples%')}%; micro/pequenas {_rngc(_PIDX_PRIV, [5, 6, 7], 'micro_peq%')}%.",
+         f"Rotatividade típica do comércio → risco {_rngc(_PIDX_PRIV, [5, 6, 7], 'taxa_y', 1)}%."]),
     "Risco Médio": ("Alimentação e varejo de alta rotação",
-        ["Bares/restaurantes (56) e varejo; jovens (~34 anos), 1,1–1,6 ano de casa.",
-         "Remuneração baixa em 19–33%; Simples 38–45%; micro/pequenas 60–67%.",
-         "Risco 18,8–28,5%."]),
+        [f"Bares/restaurantes (56) e varejo; jovens (~{_PIDX_PRIV.loc[[8, 9, 10], 'idade_media'].mean():.0f} anos), {_rngc(_PIDX_PRIV, [8, 9, 10], 'tempo_anos', 1)} ano de casa.",
+         f"Remuneração baixa em {_rngc(_PIDX_PRIV, [8, 9, 10], 'rem_baixa%')}%; Simples {_rngc(_PIDX_PRIV, [8, 9, 10], 'simples%')}%; micro/pequenas {_rngc(_PIDX_PRIV, [8, 9, 10], 'micro_peq%')}%.",
+         f"Risco {_rngc(_PIDX_PRIV, [8, 9, 10], 'taxa_y', 1)}%."]),
     "Risco Alto": ("Operário da construção civil em micro construtora",
-        ["Construção (41/42/43, lift até 7×); CBO 7 (produção) até 51%.",
-         "97–99,7% CLT 'indeterminado' — a saída é por dispensa, não fim de contrato; "
-         "micro/pequenas 65–87%; até-fundamental 10–15%.",
-         "Rotatividade estrutural: risco 35–71% ao ano."]),
+        [f"Construção (41/42/43, lift até {_br(_liftmax(_PIDX_PRIV, [11, 12, 13, 14], 'cnae2_distintivo', [41, 42, 43]))}×); CBO 7 (produção) até {_sharemax(_PIDX_PRIV, [11, 12, 13, 14], 'cbo1_distintivo', [7]):.0f}%.",
+         f"{_rngc(_PIDX_PRIV, [11, 12, 13, 14], 'clt_indet%', 1)}% CLT 'indeterminado' — a saída é por dispensa, não fim de contrato; "
+         f"micro/pequenas {_rngc(_PIDX_PRIV, [11, 12, 13, 14], 'micro_peq%')}%; até-fundamental {_rngc(_PIDX_PRIV, [11, 12, 13, 14], 'ate_fund%')}%.",
+         f"Rotatividade estrutural: risco {_rngc(_PIDX_PRIV, [11, 12, 13, 14], 'taxa_y')}% ao ano."]),
 }
 INDS_PRIV = [("CLT indet.", "clt_indet%"), ("Nível superior", "superior%"), ("Salário > 5 SM", "rem_alta%"),
              ("Optante Simples", "simples%"), ("Micro/peq. empresa", "micro_peq%"), ("Ensino fundamental", "ate_fund%")]
@@ -520,9 +561,9 @@ def apx_contexto():
         (True, f"Removendo o setor público saem {rem/1e6:.0f} mi de vínculos ({100*rem/ntot:.0f}% da base);"),
         (None, f"restam {npriv/1e6:.0f} mi de trabalhadores do setor privado."),
         (False, "O que muda nas personas"),
-        (True, "O setor público dominava a categoria 1 (75% do grupo de menor risco)."),
-        (True, "Sem ele, o piso de risco passa a ser o veterano do financeiro e da"),
-        (None, "saúde — não mais o servidor concursado."),
+        (True, f"O setor público dominava a categoria 1 ({_PIDX.loc[1, 'publico%']:.0f}% do grupo de menor risco)."),
+        (True, "Sem ele, o piso de risco passa a ser o veterano do setor"),
+        (None, "financeiro — não mais o servidor concursado."),
         (True, "Risco médio e alto (comércio, alimentação, construção) quase não mudam."),
     ], fs=12.6, dy=0.066)
     ax = fig.add_axes([0.66, 0.14, 0.30, 0.58]); ax.axis("off"); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
@@ -530,8 +571,10 @@ def apx_contexto():
     ax.text(0.5, 0.91, "Categoria 1 (risco mínimo)", ha="center", fontsize=12, weight="bold", color=NAVY)
     full_min = PERS[PERS.categoria == 1]["n"].sum()
     priv_min = PERS_PRIV[PERS_PRIV.categoria == 1]["n"].sum()
-    rows = [("Base completa", f"{full_min/1e6:.0f} mi", "75% setor público · 13 anos de casa"),
-            ("Só setor privado", f"{priv_min/1e6:.0f} mi", "financeiro/saúde · 5,8 anos de casa")]
+    rows = [("Base completa", f"{full_min/1e6:.0f} mi",
+             f"{_PIDX.loc[1, 'publico%']:.0f}% setor público · {_PIDX.loc[1, 'tempo_anos']:.0f} anos de casa"),
+            ("Só setor privado", f"{priv_min/1e6:.0f} mi",
+             f"financeiro · {_br(_PIDX_PRIV.loc[1, 'tempo_anos'])} anos de casa")]
     for i, (k, v, s) in enumerate(rows):
         y = 0.62 - i * 0.36
         ax.text(0.07, y, k, fontsize=11.5, weight="bold", color=INK)
@@ -585,6 +628,8 @@ def surv_weibull():
     formula_card(fig, LX, 0.305, 0.43, 0.098, r"\ln(-\ln S)=p\,\ln t+\ln\alpha", fs=20)
     prosa(fig, LX, 0.240, "R² médio ≈ 0,994; extrapola até 36 MOB (tracejado).", fs=11.8, color=GREY)
     prosa(fig, LX, 0.205, "Q1/mediana/média/Q3 já saem monotônicas (0 inversões).", fs=11.8, color=GREY)
+    prosa(fig, LX, 0.160, "Limite: a curva lisa não captura sazonalidade intra-ano (pico de", fs=11.0, color=GREY)
+    prosa(fig, LX, 0.127, "dezembro) — acima de 12 MOB os valores são PROJEÇÃO.", fs=11.0, color=GREY)
     ax = fig.add_axes([0.52, 0.10, 0.46, 0.70])
     ax.imshow(plt.imread("outputs/figures/sobrevivencia_weibull_extrap_mob_2124.png")); ax.axis("off")
     footer(fig, "B2"); pages.append(fig)
@@ -679,7 +724,9 @@ def consignado_tabelas():
     ax = fig.add_axes([0.03, 0.07, 0.34, 0.74]); ax.axis("off")
     cell = []
     for _, r in PRAZO.iterrows():
-        cell.append([int(r.categoria)] + [("120+" if r[c] > 120 else f"{r[c]:.0f}")
+        # truncado p/ baixo (floor): para um prazo MÁXIMO com confiança ≥ c, arredondar
+        # para cima superestimaria o prazo seguro (ex.: 0,6 mês NÃO autoriza 1 mês).
+        cell.append([int(r.categoria)] + [("120+" if r[c] > 120 else ("<1" if r[c] < 1 else f"{int(r[c])}"))
                                           for c in ("conf_95", "conf_90", "conf_85", "conf_80")])
     col = ["cat", "95%", "90%", "85%", "80%"]
     tbl = ax.table(cellText=cell, colLabels=col, loc="center", cellLoc="center")
@@ -702,7 +749,7 @@ def consignado_tabelas():
         tb2[i, 0].set_facecolor(gcolor(cell2[i-1][0])); tb2[i, 0].set_text_props(color="white", weight="bold")
     fig.text(0.42, 0.83, "Cobertura esperada de parcelas (% pagas em folha) por prazo T", fontsize=11.5,
              weight="bold", color=INK)
-    fig.text(0.03, 0.035, r"Prazo: $t=\lambda(-\ln c)^{1/p}$.  Cobertura: $\sum S(m)/T$, com S = KM (≤12 MOB) + Weibull (>12). "
+    fig.text(0.03, 0.035, r"Prazo: $t=\lambda(-\ln c)^{1/p}$, truncado p/ baixo (conservador).  Cobertura: $\sum S(m)/T$, com S = KM (≤12 MOB) + Weibull (>12). "
              "Referência 2021–2024. >12m é projeção.", fontsize=9.5, color=GREY)
     footer(fig, "C2"); pages.append(fig)
 consignado_tabelas()

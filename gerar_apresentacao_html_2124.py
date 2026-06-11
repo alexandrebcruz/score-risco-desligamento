@@ -224,7 +224,9 @@ B2_TXT = (bullets_html([
                   (True, "lineariza e ajusta por OLS nos 12 pontos:")]) +
     fblock(r"\ln(-\ln S)=p\,\ln t+\ln\alpha") +
     bullets_html([(True, "R² médio ≈ 0,994; extrapola até 36 MOB (tracejado)."),
-                  (True, "Q1/mediana/média/Q3 já saem monotônicas (0 inversões).")]))
+                  (True, "Q1/mediana/média/Q3 já saem monotônicas (0 inversões)."),
+                  (True, "Limite: a curva lisa não captura sazonalidade intra-ano (pico de "
+                         "dezembro) — acima de 12 MOB os valores são PROJEÇÃO.")]))
 
 def interactive_slide(kicker, title, txt, chart_id):
     return f'''<div class="slide cust">
@@ -274,7 +276,8 @@ def _termo_tbl():
     for _, r in PRAZO.iterrows():
         k = int(r.categoria); cells = ""
         for c in ("conf_95", "conf_90", "conf_85", "conf_80"):
-            v = float(r[c]); disp = "120+" if v > 120 else f"{v:.0f}"
+            # floor (não round): prazo MÁXIMO com confiança ≥ c não pode ser arredondado p/ cima
+            v = float(r[c]); disp = "120+" if v > 120 else ("&lt;1" if v < 1 else f"{int(v)}")
             cells += '<td style="background:%s">%s</td>' % (_heat(min(v, 36) / 36), disp)
         body += "<tr>" + _catcell(k) + cells + "</tr>"
     return '<table class="aptbl"><thead>%s</thead><tbody>%s</tbody></table>' % (h, body)
@@ -381,7 +384,7 @@ def consig_tables_slide():
     return ('<div class="slide cust"><div class="hb"><span class="kick">REFERÊNCIA PARA A POLÍTICA DE CONCESSÃO</span>'
             '<span class="ttl">Prazo máximo e cobertura de parcelas por categoria (14 faixas, ref. 2021–2024)</span></div>'
             '<div class="aptwrap-l"><div class="apt-h">Prazo máx. (meses) por confiança de seguir empregado</div>' + TERMO_TBL +
-            '<div class="apt-note">' + mtex(r"t=\lambda(-\ln c)^{1/p}") + ' · inteiros · cap "120+"</div></div>'
+            '<div class="apt-note">' + mtex(r"t=\lambda(-\ln c)^{1/p}") + ' · truncado p/ baixo (conservador) · cap "120+"</div></div>'
             '<div class="aptwrap-r"><div class="apt-h">Cobertura esperada de parcelas (% pagas em folha) por prazo T</div>' + COV_TBL +
             '<div class="apt-note">' + mtex(r"\sum S(m)/T") + ' · S = KM MOB (≤12) + Weibull (&gt;12) · ref. 2021–2024 · &gt;12m é projeção</div></div></div>')
 
@@ -546,11 +549,11 @@ HTML = r"""<!DOCTYPE html>
   .taxbtn:hover{background:#f4a722;color:#14233f;}
 </style></head>
 <body>
-<div class="deck"><div class="stage" id="stage">
+<div class="deck"><div class="stage" id="stage" role="region" aria-roledescription="apresentação" aria-label="Risco de Desligamento — slides">
 __SLIDES__
   <div class="modal" id="ratemodal" onclick="if(event.target===this)closeRate()">
     <div class="modalbox">
-      <button class="x" onclick="closeRate()">×</button>
+      <button class="x" onclick="closeRate()" aria-label="fechar">×</button>
       <h3>Taxa de desligamento por categoria — 2016 a 2025</h3>
       <div class="sub">Dispensa sem justa causa observada a cada ano. Faixa sombreada = período de modelagem (treino 2021–2024).</div>
       <div class="ratectrls" id="rate-grp"></div>
@@ -560,7 +563,7 @@ __SLIDES__
   </div>
   <div class="modal" id="ratecurvemodal" onclick="if(event.target===this)closeRateCurve()">
     <div class="modalbox">
-      <button class="x" onclick="closeRateCurve()">×</button>
+      <button class="x" onclick="closeRateCurve()" aria-label="fechar">×</button>
       <h3 id="rc-title">Taxa de juros por prazo, por categoria</h3>
       <div class="sub" id="rc-sub"></div>
       <div class="ratectrls"><div class="grp" id="rc-grp"></div><div id="rc-tog" style="display:flex;gap:.5em"></div></div>
@@ -568,7 +571,7 @@ __SLIDES__
       <svg id="svg-rc" viewBox="0 0 920 460" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
   </div>
-  <div class="nav"><button onclick="go(-1)" title="anterior (←)">‹</button><span id="counter"></span><button onclick="go(1)" title="próximo (→)">›</button></div>
+  <div class="nav" role="navigation" aria-label="navegação de slides"><button onclick="go(-1)" title="anterior (←)" aria-label="slide anterior">‹</button><span id="counter" aria-live="polite"></span><button onclick="go(1)" title="próximo (→)" aria-label="próximo slide">›</button></div>
 </div></div>
 <div id="tip"></div>
 <script>
@@ -583,6 +586,13 @@ function go(d){ show(cur+d); }
 document.addEventListener('keydown',e=>{ if(e.key==='ArrowRight'||e.key==='PageDown')go(1);
   else if(e.key==='ArrowLeft'||e.key==='PageUp')go(-1);
   else if(e.key==='Home')show(0); else if(e.key==='End')show(slides.length-1); });
+/* swipe horizontal p/ tablet/celular (ignora gestos verticais e toques em modais/controles) */
+let _sw=null;
+document.addEventListener('touchstart',e=>{ if(e.target.closest('.modal,button,a,table'))return;
+  _sw={x:e.touches[0].clientX,y:e.touches[0].clientY}; },{passive:true});
+document.addEventListener('touchend',e=>{ if(!_sw)return;
+  const dx=e.changedTouches[0].clientX-_sw.x, dy=e.changedTouches[0].clientY-_sw.y; _sw=null;
+  if(Math.abs(dx)>60&&Math.abs(dx)>2*Math.abs(dy)) go(dx<0?1:-1); },{passive:true});
 show(0);
 
 const tip=document.getElementById('tip');
