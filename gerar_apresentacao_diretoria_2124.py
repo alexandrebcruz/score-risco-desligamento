@@ -133,8 +133,28 @@ def base_analitica():
         (True, "Desempenho estável em 10 safras (inclusive na pandemia)"),
         (None, "e calibrado: risco previsto bate com o observado →"),
     ], fs=12.6, dy=0.060)
-    ax = fig.add_axes([0.55, 0.12, 0.42, 0.64]); ax.axis("off")
-    ax.imshow(plt.imread("outputs/figures/calibracao_ensemble_2124.png"))
+    # calibração 2025 desenhada NATIVA no slide (vetorial no SVG — sem PNG raster)
+    cal = pd.read_csv("outputs/runpod_retreino_2124/calibracao_2025.csv")
+    ax = fig.add_axes([0.60, 0.17, 0.345, 0.555])
+    lim = max(cal.prevista.max(), cal.observada.max()) * 1.08
+    ax.plot([0, lim], [0, lim], ls="--", lw=1.1, color="#999999", label="calibração perfeita")
+    ax.plot(cal.prevista, cal.observada, marker="o", ms=5, lw=1.8, color=BLUE,
+            label="ensemble 2021–24")
+    for _, r in cal.iterrows():
+        ax.annotate(f"{r.n/1e6:.1f}M".replace(".", ","), (r.prevista, r.observada),
+                    fontsize=6.5, color="#8a93a1", xytext=(5, -9), textcoords="offset points")
+    ax.set_xlim(0, lim); ax.set_ylim(0, lim)
+    ax.set_xlabel("Risco previsto (média do decil)", fontsize=9.5, color=INK)
+    ax.set_ylabel("Risco observado (freq. real)", fontsize=9.5, color=INK)
+    ax.set_title("Calibração — out-of-time 2025", fontsize=11, color=NAVY, weight="bold")
+    ax.tick_params(labelsize=8, colors=GREY)
+    from matplotlib.ticker import FuncFormatter
+    for axis in (ax.xaxis, ax.yaxis):          # frações → porcentagem (legibilidade)
+        axis.set_major_formatter(FuncFormatter(lambda v, _: f"{v*100:.0f}%"))
+    ax.legend(fontsize=8.5, frameon=False, loc="upper left")
+    ax.grid(alpha=.3, lw=.5)
+    for s in ("top", "right"):
+        ax.spines[s].set_visible(False)
     fig.text(0.55, 0.085, "Calibração no out-of-time 2025: risco previsto ≈ risco observado em todas as faixas.",
              fontsize=9.5, color=GREY)
     footer(fig, "3"); pages.append(fig)
@@ -493,10 +513,10 @@ function makeChart(svgId, chipsId, grpId, showExt, xmax){
     DATA.forEach(s=>{ if(!visible.has(s.k))return; for(const v of s.S)if(v<lo)lo=v;
       if(showExt)for(let m=H;m<=xmax;m++)if(s.W[m]<lo)lo=s.W[m]; });
     const pad=0.04*(1-lo)+0.005; yMin=Math.max(0,lo-pad); yMax=1; }
-  function axes(){ const range=yMax-yMin,dec=range<0.04?3:2,NT=5;
+  function axes(){ const range=yMax-yMin,dec=range<0.04?1:0,NT=5;
     for(let i=0;i<=NT;i++){const s=yMin+range*i/NT,y=yPix(s);
       svg.appendChild(el('line',{class:'grid',x1:M.l,y1:y,x2:W-M.r,y2:y}));
-      const t=el('text',{class:'tk',x:M.l-6,y:y+3,'text-anchor':'end'});t.textContent=s.toFixed(dec);svg.appendChild(t);}
+      const t=el('text',{class:'tk',x:M.l-6,y:y+3,'text-anchor':'end'});t.textContent=(s*100).toFixed(dec)+'%';svg.appendChild(t);}
     const step=xmax>12?3:1;
     for(let m=0;m<=xmax;m+=step){const x=xPix(m);
       svg.appendChild(el('line',{class:'grid',x1:x,y1:M.t,x2:x,y2:M.t+PH}));

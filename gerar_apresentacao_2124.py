@@ -266,6 +266,9 @@ def desempenho():
     axc.set_xlabel("risco previsto (média do decil)", fontsize=9.5)
     axc.set_ylabel("risco observado (freq. real)", fontsize=9.5)
     axc.set_title("Calibração — out-of-time 2025", fontsize=11.5, weight="bold", loc="left", color=INK)
+    from matplotlib.ticker import FuncFormatter as _FF
+    for _axis in (axc.xaxis, axc.yaxis):       # frações → porcentagem (legibilidade)
+        _axis.set_major_formatter(_FF(lambda v, _: f"{v*100:.0f}%"))
     axc.tick_params(labelsize=8.5); axc.legend(fontsize=8.5, loc="upper left"); axc.grid(alpha=.3)
     for s in ("top", "right"): axc.spines[s].set_visible(False)
 
@@ -713,6 +716,8 @@ def consignado_conceitos():
                 arrowprops=dict(arrowstyle="->", color="#b9671a"))
     ax.text(14, 0.45, "área ÷ T\n= cobertura", fontsize=8.5, color=BLUE, ha="center")
     ax.set_xlabel("meses (MOB)", fontsize=9.5); ax.set_ylabel("S(t)", fontsize=9.5)
+    from matplotlib.ticker import FuncFormatter as _FF
+    ax.yaxis.set_major_formatter(_FF(lambda v, _: f"{v*100:.0f}%"))   # fração → %
     ax.set_title("S(t) define prazo e cobertura", fontsize=10.5, weight="bold")
     ax.grid(alpha=.25)
     for sp in ("top", "right"): ax.spines[sp].set_visible(False)

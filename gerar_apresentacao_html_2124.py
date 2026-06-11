@@ -609,10 +609,10 @@ function makeChart(svgId, chipsId, grpId, showExt, xmax){
     DATA.forEach(s=>{ if(!visible.has(s.k))return; for(const v of s.S)if(v<lo)lo=v;
       if(showExt)for(let m=H;m<=xmax;m++)if(s.W[m]<lo)lo=s.W[m]; });
     const pad=0.04*(1-lo)+0.005; yMin=Math.max(0,lo-pad); yMax=1; }
-  function axes(){ const range=yMax-yMin,dec=range<0.04?3:2,NT=5;
+  function axes(){ const range=yMax-yMin,dec=range<0.04?1:0,NT=5;
     for(let i=0;i<=NT;i++){const s=yMin+range*i/NT,y=yPix(s);
       svg.appendChild(el('line',{class:'grid',x1:M.l,y1:y,x2:W-M.r,y2:y}));
-      const t=el('text',{class:'tk',x:M.l-6,y:y+3,'text-anchor':'end'});t.textContent=s.toFixed(dec);svg.appendChild(t);}
+      const t=el('text',{class:'tk',x:M.l-6,y:y+3,'text-anchor':'end'});t.textContent=(s*100).toFixed(dec)+'%';svg.appendChild(t);}
     const step=xmax>12?3:1;
     for(let m=0;m<=xmax;m+=step){const x=xPix(m);
       svg.appendChild(el('line',{class:'grid',x1:x,y1:M.t,x2:x,y2:M.t+PH}));
