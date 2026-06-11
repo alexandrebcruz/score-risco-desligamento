@@ -11,6 +11,7 @@ import os, shutil
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.ticker import PercentFormatter
 
 ART = "outputs/runpod_retreino_2124"
 FIG = "outputs/figures"; os.makedirs(FIG, exist_ok=True)
@@ -31,6 +32,8 @@ for _, r in cal.iterrows():
     ax.annotate(f"{r.n/1e6:.1f}M", (r.prevista, r.observada), fontsize=7, color="#888",
                 xytext=(4, -8), textcoords="offset points")
 ax.set_xlabel("Risco previsto (média do decil)"); ax.set_ylabel("Risco observado (freq. real)")
+ax.xaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
+ax.yaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
 ax.set_title("Calibração — ensemble 2021–24 (out-of-time 2025)")
 ax.legend(); ax.grid(alpha=.3)
 fig.tight_layout(); salva(fig, "calibracao_ensemble_2124.png")

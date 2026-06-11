@@ -176,6 +176,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import cm, colors as mcolors
+from matplotlib.ticker import PercentFormatter
 ks = sorted(km["categoria"].unique())
 cmap = matplotlib.colormaps["RdYlGn_r"]; norm = mcolors.Normalize(vmin=min(ks), vmax=max(ks))
 cor = {k: cmap(norm(k)) for k in ks}
@@ -185,6 +186,7 @@ for k in ks:
     g = km[km.categoria == k].sort_values("mob")
     ax.plot(g.mob, g.S, marker="o", ms=3.5, lw=1.6, color=cor[k], label=f"{k}")
 ax.set_xlabel("MOB — meses desde a entrada"); ax.set_ylabel("S(t) = P(seguir empregado)")
+ax.yaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
 ax.set_title("Sobrevivência por categoria (KM, relógio MOB) — referência 2021–2024, 14 categorias")
 ax.grid(alpha=.3); ax.legend(title="cat", ncol=2, fontsize=8)
 fig.tight_layout(); fig.savefig("/tmp/skm2124.png", dpi=130)
@@ -201,6 +203,7 @@ for k in ks:
 ax.axvline(H, color="#888", ls=":", lw=1)
 ax.text(H + .3, .02, "observado ◄ | ► extrapolado (Weibull)", fontsize=9, color="#666")
 ax.set_xlabel("MOB (meses)"); ax.set_ylabel("S(t)")
+ax.yaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=0))
 ax.set_title("Extrapolação Weibull até 36 MOB — regressão cloglog nos 12 pontos observados")
 ax.grid(alpha=.3)
 fig.tight_layout(); fig.savefig("/tmp/swb2124.png", dpi=130)
