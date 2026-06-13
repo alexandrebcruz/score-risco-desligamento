@@ -549,6 +549,7 @@ HTML = r"""<!DOCTYPE html>
             box-shadow:0 10px 40px rgba(0,0,0,.45);padding:calc(var(--u)*1.4) calc(var(--u)*1.8) calc(var(--u)*1.0);}
   /* variante COMPACTA do modal (não ocupa o slide inteiro) */
   .modalbox.sm{width:64%;height:84%;}
+  .modalbox.md{width:76%;height:90%;}
   .modalbox h3{margin:0 0 2px;color:#14233f;font-size:calc(var(--u)*1.7);}
   .pplegend{display:flex;flex-wrap:wrap;gap:.4em 1.4em;margin:4px 0 2px;font-size:calc(var(--u)*0.95);color:#1b2430;}
   .pplegend .sw{display:inline-block;width:1.6em;height:0;border-top:3px solid var(--c);vertical-align:middle;margin-right:.4em;}
@@ -579,7 +580,7 @@ HTML = r"""<!DOCTYPE html>
 <div class="deck"><div class="stage" id="stage" role="region" aria-roledescription="apresentação" aria-label="Risco de Desligamento — slides">
 __SLIDES__
   <div class="modal" id="ratemodal" onclick="if(event.target===this)closeRate()">
-    <div class="modalbox">
+    <div class="modalbox md">
       <button class="x" onclick="closeRate()" aria-label="fechar">×</button>
       <h3>Taxa de desligamento por categoria — 2016 a 2025</h3>
       <div class="sub">Dispensa sem justa causa observada a cada ano. Faixa sombreada = período de modelagem (treino 2021–2024).</div>
@@ -601,7 +602,7 @@ __SLIDES__
     </div>
   </div>
   <div class="modal" id="ratecurvemodal" onclick="if(event.target===this)closeRateCurve()">
-    <div class="modalbox">
+    <div class="modalbox md">
       <button class="x" onclick="closeRateCurve()" aria-label="fechar">×</button>
       <h3 id="rc-title">Taxa de juros por prazo, por categoria</h3>
       <div class="sub" id="rc-sub"></div>
