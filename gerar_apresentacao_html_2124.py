@@ -77,6 +77,22 @@ GROUPS = [("Mínimo", [1], "#1a9850"), ("Baixo", [2, 3, 4], "#86cb66"),
           ("Alto", [11, 12, 13, 14], "#d73027")]
 GROUPS_JSON = json.dumps([{"nome": n, "cats": c, "cor": col} for n, c, col in GROUPS], ensure_ascii=False)
 
+# ---------- categoria 1 com × sem setor público — modal do slide B1 (KM) ----------
+# Fonte: surv_cat1_publico_vs_privado_2124.py (mesma metodologia/ref. 2021–2024 do KM oficial;
+# a série "geral" reproduz EXATAMENTE a curva da cat 1 do slide). Cat 2 geral entra como referência.
+_pp = pd.read_csv("outputs/tables/sobrevivencia_km_cat1_pub_priv_2124.csv")
+def _ppS(pop):
+    return [round(float(v), 5) for v in _pp[_pp["pop"] == pop].sort_values("mob")["S"].tolist()]
+_c1g, _c1p = _ppS("geral"), _ppS("privado")
+_c2g = [round(float(v), 5) for v in km[km.categoria == 2].sort_values("mes")["S"].tolist()]
+CAT1PP_GAP = round(max(abs(a - b) for a, b in zip(_c1g, _c1p)) * 100, 2)   # p.p.
+CAT1PP = [
+    {"nome": "Cat 1 — geral (todo o público)", "cor": cor[1], "dash": "", "S": _c1g},
+    {"nome": "Cat 1 — sem setor público", "cor": "#2c5f9e", "dash": "6 4", "S": _c1p},
+    {"nome": "Cat 2 — geral (referência)", "cor": cor[2], "dash": "", "S": _c2g},
+]
+CAT1PP_JSON = json.dumps(CAT1PP, ensure_ascii=False)
+
 # ---------- taxa de desligamento por (categoria, ano) 2016–2025 — modal do slide 8 ----------
 _tx = pd.read_csv("outputs/tables/categoria_ano_taxa_2124.csv")
 _anos_tx = [c for c in _tx.columns if c != "categoria"]
@@ -228,7 +244,7 @@ B2_TXT = (bullets_html([
                   (True, "Limite: a curva lisa não captura sazonalidade intra-ano (pico de "
                          "dezembro) — acima de 12 MOB os valores são PROJEÇÃO.")]))
 
-def interactive_slide(kicker, title, txt, chart_id):
+def interactive_slide(kicker, title, txt, chart_id, extra=""):
     return f'''<div class="slide cust">
   <div class="hb"><span class="kick">{kicker}</span><span class="ttl">{title}</span></div>
   <div class="txt">{txt}</div>
@@ -236,6 +252,7 @@ def interactive_slide(kicker, title, txt, chart_id):
     <div class="ctrls"><div class="grp" id="grp-{chart_id}"></div><div class="chips" id="chips-{chart_id}"></div></div>
     <svg id="svg-{chart_id}" viewBox="0 0 760 470" preserveAspectRatio="xMidYMid meet"></svg>
   </div>
+  {extra}
 </div>'''
 
 def features_slide():
@@ -395,8 +412,11 @@ for i in range(NP):
     if i == PREPARO:
         slides.append(features_slide())
     elif i == B1:
+        _btn_c1pp = ('<button class="ratebtn" style="bottom:3.5%" onclick="openCat1PP()">'
+                     '🔍 Cat 1: com × sem setor público</button>')
         slides.append(interactive_slide("TEMPO ATÉ O DESLIGAMENTO · SOBREVIVÊNCIA",
-                      "Curvas de sobrevivência por categoria — MOB, ref. 2021–2024 (Kaplan-Meier)", B1_TXT, "km"))
+                      "Curvas de sobrevivência por categoria — MOB, ref. 2021–2024 (Kaplan-Meier)", B1_TXT, "km",
+                      extra=_btn_c1pp))
     elif i == B2:
         slides.append(interactive_slide("TEMPO ATÉ O DESLIGAMENTO · EXTRAPOLAÇÃO",
                       "Extrapolação Weibull das curvas (até 36 MOB)", B2_TXT, "weib"))
@@ -527,7 +547,14 @@ HTML = r"""<!DOCTYPE html>
   .modalbox{position:relative;background:#fff;border-radius:12px;width:94%;height:94%;overflow:hidden;
             display:flex;flex-direction:column;
             box-shadow:0 10px 40px rgba(0,0,0,.45);padding:calc(var(--u)*1.4) calc(var(--u)*1.8) calc(var(--u)*1.0);}
+  /* variante COMPACTA do modal (não ocupa o slide inteiro) */
+  .modalbox.sm{width:64%;height:84%;}
   .modalbox h3{margin:0 0 2px;color:#14233f;font-size:calc(var(--u)*1.7);}
+  .pplegend{display:flex;flex-wrap:wrap;gap:.4em 1.4em;margin:4px 0 2px;font-size:calc(var(--u)*0.95);color:#1b2430;}
+  .pplegend .sw{display:inline-block;width:1.6em;height:0;border-top:3px solid var(--c);vertical-align:middle;margin-right:.4em;}
+  .pplegend .sw.dash{border-top-style:dashed;}
+  .ppnote{background:#fff7e0;border:1px solid #f0d48a;border-radius:7px;padding:calc(var(--u)*0.35) calc(var(--u)*0.7);
+          font-size:calc(var(--u)*0.95);color:#5a4a12;margin:4px 0 2px;}
   .modalbox .sub{color:#5b6675;font-size:calc(var(--u)*1.05);margin-bottom:6px;}
   .modalbox .x{position:absolute;top:calc(var(--u)*0.6);right:calc(var(--u)*1.0);font-size:calc(var(--u)*2.2);
                color:#5b6675;cursor:pointer;background:none;border:none;line-height:1;}
@@ -559,6 +586,18 @@ __SLIDES__
       <div class="ratectrls" id="rate-grp"></div>
       <div class="ratechips" id="rate-chips"></div>
       <svg id="svg-rate" viewBox="0 0 920 460" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+  </div>
+  <div class="modal" id="cat1ppmodal" onclick="if(event.target===this)closeCat1PP()">
+    <div class="modalbox sm">
+      <button class="x" onclick="closeCat1PP()" aria-label="fechar">×</button>
+      <h3>Categoria 1 — com × sem setor público (KM, MOB 0–12)</h3>
+      <div class="sub">Mesma metodologia e referência (2021–2024) da curva do slide; "sem setor público" exclui natureza_setor = 1.</div>
+      <div class="ppnote"><b>As curvas da categoria 1 são muito próximas:</b> excluir o setor público muda S(t) em no máximo
+        <b>__C1PPGAP__ p.p.</b> em 12 MOB — a categoria 1 segue de risco mínimo mesmo só com o setor privado
+        (a categoria 2, ao lado, está bem abaixo).</div>
+      <div class="pplegend" id="pp-legend"></div>
+      <svg id="svg-c1pp" viewBox="0 0 760 400" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
   </div>
   <div class="modal" id="ratecurvemodal" onclick="if(event.target===this)closeRateCurve()">
@@ -653,6 +692,52 @@ function makeChart(svgId, chipsId, grpId, showExt, xmax){
 }
 makeChart('svg-km','chips-km','grp-km',false,12);
 makeChart('svg-weib','chips-weib','grp-weib',true,36);
+
+/* ---------- modal: categoria 1 com × sem setor público (KM MOB 0-12) ---------- */
+const CAT1PP=__CAT1PP__;
+const _ppmodal=document.getElementById('cat1ppmodal');
+let _ppDrawn=false;
+function openCat1PP(){ _ppmodal.classList.add('on'); if(!_ppDrawn){ drawCat1PP(); _ppDrawn=true; } }
+function closeCat1PP(){ _ppmodal.classList.remove('on'); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape')closeCat1PP(); });
+function drawCat1PP(){
+  const svg=document.getElementById('svg-c1pp'); if(!svg) return;
+  const NS='http://www.w3.org/2000/svg', W=760,HT=400,M={l:54,r:12,t:10,b:38},PW=W-M.l-M.r,PH=HT-M.t-M.b,H=12;
+  function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+  // domínio Y dinâmico (mesmo critério do makeChart do slide)
+  let lo=1; CAT1PP.forEach(s=>{ for(const v of s.S) if(v<lo)lo=v; });
+  const pad=0.04*(1-lo)+0.005, yMin=Math.max(0,lo-pad), yMax=1;
+  const xPix=m=>M.l+(m/H)*PW, yPix=s=>M.t+(1-(s-yMin)/(yMax-yMin))*PH;
+  const range=yMax-yMin, dec=range<0.04?1:0, NT=5;
+  for(let i=0;i<=NT;i++){ const s=yMin+range*i/NT, y=yPix(s);
+    svg.appendChild(el('line',{class:'grid',x1:M.l,y1:y,x2:W-M.r,y2:y}));
+    const t=el('text',{class:'tk',x:M.l-6,y:y+3,'text-anchor':'end'});t.textContent=(s*100).toFixed(dec)+'%';svg.appendChild(t);}
+  for(let m=0;m<=H;m++){ const x=xPix(m);
+    svg.appendChild(el('line',{class:'grid',x1:x,y1:M.t,x2:x,y2:M.t+PH}));
+    const t=el('text',{class:'tk',x:x,y:M.t+PH+15,'text-anchor':'middle'});t.textContent=m;svg.appendChild(t);}
+  svg.appendChild(el('line',{class:'ax',x1:M.l,y1:M.t,x2:M.l,y2:M.t+PH}));
+  svg.appendChild(el('line',{class:'ax',x1:M.l,y1:M.t+PH,x2:W-M.r,y2:M.t+PH}));
+  const yl=el('text',{class:'al','text-anchor':'middle',transform:'translate(14,'+(M.t+PH/2)+') rotate(-90)'});yl.textContent='S(t) = P(seguir empregado)';svg.appendChild(yl);
+  const xl=el('text',{class:'al',x:M.l+PW/2,y:HT-4,'text-anchor':'middle'});xl.textContent='MOB — meses desde a entrada';svg.appendChild(xl);
+  CAT1PP.forEach(s=>{
+    let d='M '+xPix(0)+' '+yPix(s.S[0]); for(let m=1;m<=H;m++)d+=' L '+xPix(m)+' '+yPix(s.S[m]);
+    const a={class:'cv',d:d,stroke:s.cor}; if(s.dash)a['stroke-dasharray']=s.dash;
+    svg.appendChild(el('path',a));
+    for(let m=0;m<=H;m++)svg.appendChild(el('circle',{class:'dt',cx:xPix(m),cy:yPix(s.S[m]),r:2.4,fill:s.cor}));
+  });
+  const guide=el('line',{class:'guide',y1:M.t,y2:M.t+PH}); svg.appendChild(guide);
+  svg.addEventListener('mousemove',ev=>{ const r=svg.getBoundingClientRect(); const sx=(ev.clientX-r.left)*(W/r.width);
+    let m=Math.round((sx-M.l)/PW*H); m=Math.max(0,Math.min(H,m));
+    if(sx<M.l-4||sx>W-M.r+4){tip.style.visibility='hidden';guide.style.visibility='hidden';return;}
+    guide.setAttribute('x1',xPix(m));guide.setAttribute('x2',xPix(m));guide.style.visibility='visible';
+    let html='<b>MOB '+m+'</b><br>';
+    CAT1PP.forEach(s=>{html+='<span style="color:'+s.cor+'">■</span> '+s.nome+': <b>'+(s.S[m]*100).toFixed(2)+'%</b><br>';});
+    tip.innerHTML=html; tip.style.left=Math.min(ev.clientX+12,window.innerWidth-280)+'px'; tip.style.top=(ev.clientY+12)+'px'; tip.style.visibility='visible';
+  });
+  svg.addEventListener('mouseleave',()=>{tip.style.visibility='hidden';guide.style.visibility='hidden';});
+  const leg=document.getElementById('pp-legend');
+  leg.innerHTML=CAT1PP.map(s=>'<span><span class="sw'+(s.dash?' dash':'')+'" style="--c:'+s.cor+'"></span>'+s.nome+'</span>').join('');
+}
 
 function makeBoxChart(){
   const svg=document.getElementById('svg-box'); if(!svg) return;
@@ -881,7 +966,9 @@ function drawRC(){
 HTML = (HTML.replace("__FONTS__", FONTS).replace("__SLIDES__", SLIDES)
             .replace("__DATA__", DATA).replace("__GROUPS__", GROUPS_JSON)
             .replace("__RATE__", RATE_JSON).replace("__RATECURVE__", RATECURVE_JSON)
-            .replace("__IMP__", IMP_JSON).replace("__FEATINFO__", FEATINFO_JSON))
+            .replace("__IMP__", IMP_JSON).replace("__FEATINFO__", FEATINFO_JSON)
+            .replace("__CAT1PP__", CAT1PP_JSON)
+            .replace("__C1PPGAP__", f"{CAT1PP_GAP:.2f}".replace(".", ",")))
 with open(TMP, "w", encoding="utf-8") as f:
     f.write(HTML)
 shutil.copy(TMP, OUT)
