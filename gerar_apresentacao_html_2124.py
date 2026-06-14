@@ -103,6 +103,41 @@ RATE = {"anos": [int(a) for a in _anos_tx],
                    for _, r in _tx.sort_values("categoria").iterrows()]}
 RATE_JSON = json.dumps(RATE, ensure_ascii=False)
 
+# ---------- desligamentos por motivo literal — RAIS 2025 (modal do slide 2/contexto) ----------
+# Contagem do código CRU `motivo_desligamento` sobre o interim 2025 (91.710.262 vínculos,
+# 7 partições). Os rótulos vêm do de-para OFICIAL data/dicts/depara_motivo_literal.csv
+# (RAIS, layout 2020); códigos residuais ausentes nesse layout ficam sem rótulo (honesto).
+MOT_CNT = {0: 60691770, 11: 11878081, 21: 9350414, 12: 5328339, 31: 3282334, 10: 658961,
+           90: 228025, 60: 94910, 81: 86745, 20: 48083, 34: 27913, 22: 11395, 40: 6989,
+           82: 5965, 24: 3555, 50: 2398, 35: 1667, 65: 1428, 36: 896, 30: 394}
+_motlit = pd.read_csv("data/dicts/depara_motivo_literal.csv")
+_MOTLIT = {int(r.codigo): str(r.descricao) for r in _motlit.itertuples()}
+def _mot_rotulo(cod):
+    d = _MOTLIT.get(cod)
+    if d is None:
+        return None
+    return re.sub(r"^\s*0?\d+\s*-\s*", "", d.strip()).rstrip(". ").strip()  # tira "NN - " e ponto final
+MOT_TOTAL = sum(MOT_CNT.values())
+MOT_DESL = sum(v for k, v in MOT_CNT.items() if k != 0)   # exclui código 0 (não desligado)
+_mot_rows = sorted(((k, v) for k, v in MOT_CNT.items() if k != 0), key=lambda kv: -kv[1])
+MOT_NTOP = 10                                              # mostra os 10 principais por default
+def _brnum(n): return f"{n:,}".replace(",", ".")
+def _brpct(x, nd=2): return f"{x:.{nd}f}".replace(".", ",")
+def _motivos_tbody():
+    body = ""
+    for rank, (cod, qtd) in enumerate(_mot_rows, 1):
+        rot = _mot_rotulo(cod)
+        rot = rot if rot is not None else '<span class="mot-na">código sem rótulo no de-para oficial</span>'
+        cls = "" if rank <= MOT_NTOP else "mot-extra"
+        body += ('<tr class="%s"><td class="mc">%d</td><td class="ml">%s</td>'
+                 '<td class="mn">%s</td><td class="mp">%s%%</td><td class="mp">%s%%</td></tr>'
+                 % (cls, cod, rot, _brnum(qtd), _brpct(qtd / MOT_TOTAL * 100), _brpct(qtd / MOT_DESL * 100)))
+    return body
+MOT_TBODY = _motivos_tbody()
+MOT_TOTAL_S, MOT_DESL_S = _brnum(MOT_TOTAL), _brnum(MOT_DESL)
+MOT_DESLPCT_S = _brpct(MOT_DESL / MOT_TOTAL * 100, 1)
+MOT_EXTRA_S = str(len(_mot_rows) - MOT_NTOP)
+
 # ---------- dados do slide de FEATURES (importância clicável, layout do deck anterior) ----------
 _imp = pd.read_csv("outputs/runpod_retreino_2124/importancia_ensemble.csv").sort_values("imp_ensemble", ascending=False)
 IMP_JSON = json.dumps([{"f": r.feature, "imp": round(float(r.imp_ensemble), 2)} for r in _imp.itertuples()], ensure_ascii=False)
@@ -411,6 +446,13 @@ slides = []
 for i in range(NP):
     if i == PREPARO:
         slides.append(features_slide())
+    elif i == 1:
+        # slide 2 (contexto) estático + botão que abre o modal de desligamentos por motivo (RAIS 2025)
+        svg = inline_svg(f"{DUMP}/slide_{i:02d}.svg", f"s{i:02d}_")
+        slides.append(f'<div class="slide">{svg}'
+                      '<button class="ratebtn" style="left:auto;right:3.5%;bottom:5%" '
+                      'onclick="openMotivos()">📋 Desligamentos por motivo (RAIS 2025)</button>'
+                      '</div>')
     elif i == B1:
         _btn_c1pp = ('<button class="ratebtn" style="bottom:3.5%" onclick="openCat1PP()">'
                      '🔍 Cat 1: com × sem setor público</button>')
@@ -575,6 +617,22 @@ HTML = r"""<!DOCTYPE html>
   .taxbtn{background:#2c5f9e;color:#fff;border:none;border-radius:7px;padding:calc(var(--u)*0.4) calc(var(--u)*0.9);
           font-size:calc(var(--u)*1.0);font-weight:700;cursor:pointer;white-space:nowrap;}
   .taxbtn:hover{background:#f4a722;color:#14233f;}
+  /* modal: desligamentos por motivo (RAIS 2025) — tabela com top-10 + expandir e scroll */
+  .mottablewrap{flex:1 1 auto;min-height:0;overflow:auto;margin-top:6px;border:1px solid #e3e8ef;border-radius:8px;}
+  .mottbl{border-collapse:collapse;width:100%;font-size:calc(var(--u)*1.05);font-variant-numeric:tabular-nums;}
+  .mottbl th{position:sticky;top:0;background:var(--navy);color:#fff;padding:calc(var(--u)*0.4) calc(var(--u)*0.6);
+             text-align:left;font-weight:600;z-index:1;}
+  .mottbl td{padding:calc(var(--u)*0.34) calc(var(--u)*0.6);border-bottom:1px solid #eef1f5;color:var(--ink);}
+  .mottbl tr:nth-child(even) td{background:#f7f9fc;}
+  .mottbl td.mc{text-align:center;font-weight:700;color:var(--navy);}
+  .mottbl td.mn,.mottbl td.mp{text-align:right;}
+  .mottbl td.mp{color:#5b6675;}
+  .mottbl .mot-na{color:#9aa3b0;font-style:italic;}
+  .mottbl tr.mot-extra{display:none;}
+  .mottbl.show-all tr.mot-extra{display:table-row;}
+  .motexpand{flex:0 0 auto;margin-top:8px;align-self:flex-start;background:#2c5f9e;color:#fff;border:none;border-radius:7px;
+             padding:calc(var(--u)*0.4) calc(var(--u)*0.95);font-size:calc(var(--u)*1.0);font-weight:700;cursor:pointer;}
+  .motexpand:hover{background:#f4a722;color:#14233f;}
 </style></head>
 <body>
 <div class="deck"><div class="stage" id="stage" role="region" aria-roledescription="apresentação" aria-label="Risco de Desligamento — slides">
@@ -609,6 +667,20 @@ __SLIDES__
       <div class="ratectrls"><div class="grp" id="rc-grp"></div><div id="rc-tog" style="display:flex;gap:.5em"></div></div>
       <div class="ratechips" id="rc-chips"></div>
       <svg id="svg-rc" viewBox="0 0 920 460" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+  </div>
+  <div class="modal" id="motivosmodal" onclick="if(event.target===this)closeMotivos()">
+    <div class="modalbox md">
+      <button class="x" onclick="closeMotivos()" aria-label="fechar">×</button>
+      <h3>Desligamentos por motivo — RAIS 2025</h3>
+      <div class="sub">__MOT_TOTAL__ vínculos no ano · __MOT_DESL__ desligamentos (__MOT_DESLPCT__% do total). Rótulos do de-para oficial da RAIS (layout 2020); ordenado por quantidade.</div>
+      <div class="mottablewrap" id="mottablewrap">
+        <table class="mottbl" id="mottbl">
+          <thead><tr><th>Cód.</th><th>Motivo do desligamento (literal)</th><th>Quantidade</th><th>% do total</th><th>% dos deslig.</th></tr></thead>
+          <tbody>__MOT_TBODY__</tbody>
+        </table>
+      </div>
+      <button class="motexpand" id="motexpand" onclick="toggleMotivos()">▾ Mostrar todos os motivos (+__MOT_EXTRA__)</button>
     </div>
   </div>
   <div class="nav" role="navigation" aria-label="navegação de slides"><button onclick="go(-1)" title="anterior (←)" aria-label="slide anterior">‹</button><span id="counter" aria-live="polite"></span><button onclick="go(1)" title="próximo (→)" aria-label="próximo slide">›</button></div>
@@ -872,6 +944,18 @@ function drawRate(){
 }
 function syncRchips(){ document.querySelectorAll('#rate-chips .chip').forEach(c=>c.classList.toggle('off',!_rateVis.has(+c.textContent))); }
 
+/* ---------- modal: desligamentos por motivo (RAIS 2025) — top-10 + expandir ---------- */
+const _motmodal=document.getElementById('motivosmodal');
+function openMotivos(){ _motmodal.classList.add('on'); }
+function closeMotivos(){ _motmodal.classList.remove('on'); }
+function toggleMotivos(){
+  const t=document.getElementById('mottbl'), b=document.getElementById('motexpand'), w=document.getElementById('mottablewrap');
+  const on=t.classList.toggle('show-all');
+  b.textContent=on?'▴ Mostrar só os 10 principais':'▾ Mostrar todos os motivos (+__MOT_EXTRA__)';
+  if(!on)w.scrollTop=0;
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape')closeMotivos(); });
+
 /* ---------- tabela de taxas: alterna entre % ao mês e % ao ano ---------- */
 let _taxAnual=false;
 function toggleTaxa(){
@@ -969,7 +1053,10 @@ HTML = (HTML.replace("__FONTS__", FONTS).replace("__SLIDES__", SLIDES)
             .replace("__RATE__", RATE_JSON).replace("__RATECURVE__", RATECURVE_JSON)
             .replace("__IMP__", IMP_JSON).replace("__FEATINFO__", FEATINFO_JSON)
             .replace("__CAT1PP__", CAT1PP_JSON)
-            .replace("__C1PPGAP__", f"{CAT1PP_GAP:.2f}".replace(".", ",")))
+            .replace("__C1PPGAP__", f"{CAT1PP_GAP:.2f}".replace(".", ","))
+            .replace("__MOT_TBODY__", MOT_TBODY).replace("__MOT_TOTAL__", MOT_TOTAL_S)
+            .replace("__MOT_DESL__", MOT_DESL_S).replace("__MOT_DESLPCT__", MOT_DESLPCT_S)
+            .replace("__MOT_EXTRA__", MOT_EXTRA_S))
 with open(TMP, "w", encoding="utf-8") as f:
     f.write(HTML)
 shutil.copy(TMP, OUT)
